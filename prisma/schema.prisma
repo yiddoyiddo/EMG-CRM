@@ -1,0 +1,100 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:../db/dev.db"
+}
+
+model Lead {
+  id            Int            @id @default(autoincrement())
+  name          String
+  title         String?
+  addedDate     DateTime       @default(now())
+  bdr           String?
+  company       String?
+  source        String
+  status        String
+  link          String?
+  phone         String?
+  notes         String?
+  email         String?        @unique
+  activityLogs  ActivityLog[]
+  pipelineItems PipelineItem[]
+}
+
+model PipelineItem {
+  id                Int           @id @default(autoincrement())
+  name              String
+  title             String?
+  addedDate         DateTime      @default(now())
+  lastUpdated       DateTime      @default(now())
+  bdr               String
+  company           String?
+  category          String
+  status            String
+  value             Float?
+  probability       Int?
+  expectedCloseDate DateTime?     // When we expect to close the entire deal (final close)
+  link              String?
+  phone             String?
+  notes             String?
+  email             String?
+  leadId            Int?
+  callDate          DateTime?
+  activityLogs      ActivityLog[]
+  lead              Lead?         @relation(fields: [leadId], references: [id])
+  
+  // Sublist functionality: parent-child relationships
+  parentId    Int?     // reference to parent pipeline item (for sublists)
+  parent      PipelineItem? @relation("PipelineSublist", fields: [parentId], references: [id])
+  children    PipelineItem[] @relation("PipelineSublist")
+  isSublist   Boolean  @default(false) // flag to identify if this is a sublist container
+  sublistName String?  // name for the sublist group
+  sortOrder   Int?     // for ordering sublists and items within sublists
+  
+  // Enhanced date tracking for agreement process
+  agreementDate       DateTime? // When the agreement was reached
+  partnerListDueDate  DateTime? // When partner list should be sent (agreed date from agreement)
+  partnerListSentDate DateTime? // When partner list was actually sent
+  firstSaleDate       DateTime? // When first sale occurred from this list
+  
+  // Partner list metrics
+  partnerListSize     Int?      // Track number of partners in list
+  totalSalesFromList  Int?      // Total sales from this partner list
+
+  @@index([bdr])
+  @@index([callDate])
+  @@index([agreementDate])
+  @@index([partnerListSentDate])
+  @@index([firstSaleDate])
+}
+
+model ActivityLog {
+  id               Int           @id @default(autoincrement())
+  timestamp        DateTime      @default(now())
+  bdr              String
+  activityType     String
+  description      String
+  scheduledDate    DateTime?
+  completedDate    DateTime?
+  notes            String?
+  leadId           Int?
+  pipelineItemId   Int?
+  previousStatus   String?
+  newStatus        String?
+  previousCategory String?
+  newCategory      String?
+  pipelineItem     PipelineItem? @relation(fields: [pipelineItemId], references: [id])
+  lead             Lead?         @relation(fields: [leadId], references: [id])
+
+  @@index([bdr])
+  @@index([activityType, timestamp])
+}
+
+model KpiTarget {
+  id    Int     @id @default(autoincrement())
+  name  String  @unique
+  value Int
+}
