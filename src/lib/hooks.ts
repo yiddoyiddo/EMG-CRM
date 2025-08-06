@@ -712,6 +712,7 @@ export function useCreateActivityLog() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['activityLogs'] });
       queryClient.invalidateQueries({ queryKey: ['batchActivityLogs'] });
+      queryClient.invalidateQueries({ queryKey: ['pipeline'] });
       // Success message handled by the component using this hook
     },
     onError: (error: Error) => {

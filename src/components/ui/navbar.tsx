@@ -3,7 +3,7 @@
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Users, LineChart, TrendingUp } from 'lucide-react';
+import { Home, Users, LineChart, TrendingUp, DollarSign } from 'lucide-react';
 
 export function Navbar() {
   const pathname = usePathname();
@@ -16,7 +16,7 @@ export function Navbar() {
     <div className="flex gap-2 mb-6 overflow-x-auto">
       <Link href="/">
         <Button 
-          variant={isActive('/') && !isActive('/leads') && !isActive('/pipeline') && !isActive('/reporting') ? 'default' : 'outline'} 
+          variant={isActive('/') && !isActive('/leads') && !isActive('/pipeline') && !isActive('/reporting') && !isActive('/finance') ? 'default' : 'outline'} 
           size="sm" 
           className="flex items-center gap-1 whitespace-nowrap"
         >
@@ -42,6 +42,16 @@ export function Navbar() {
         >
           <LineChart className="h-4 w-4" />
           <span>Pipeline</span>
+        </Button>
+      </Link>
+      <Link href="/finance">
+        <Button 
+          variant={isActive('/finance') ? 'default' : 'outline'} 
+          size="sm"
+          className="flex items-center gap-1 whitespace-nowrap"
+        >
+          <DollarSign className="h-4 w-4" />
+          <span>Finance Board</span>
         </Button>
       </Link>
       <Link href="/reporting">

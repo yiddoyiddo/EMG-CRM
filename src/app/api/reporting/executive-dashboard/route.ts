@@ -233,8 +233,10 @@ export async function GET(request: Request) {
     
     // Build where clauses
     const pipelineWhere: any = {};
+    const financeWhere: any = {};
     if (bdr) {
       pipelineWhere.bdr = bdr;
+      financeWhere.bdr = bdr;
     }
 
     const activityLogWhere: any = {
@@ -257,7 +259,8 @@ export async function GET(request: Request) {
       activityLogs,
       leads,
       allBDRs,
-      kpiTargetsRaw
+      kpiTargetsRaw,
+      financeEntries
     ] = await Promise.all([
       prisma.pipelineItem.findMany({
         where: pipelineWhere,
@@ -305,7 +308,20 @@ export async function GET(request: Request) {
         select: { bdr: true },
         distinct: ['bdr']
       }).then(p => p.map(i => i.bdr).filter(Boolean) as string[]),
-      prisma.kpiTarget.findMany()
+      prisma.kpiTarget.findMany(),
+      prisma.financeEntry.findMany({
+        where: financeWhere,
+        select: {
+          id: true,
+          bdr: true,
+          status: true,
+          soldAmount: true,
+          gbpAmount: true,
+          invoiceDate: true,
+          createdAt: true,
+          month: true,
+        },
+      }),
     ]);
 
     const kpiTargets = kpiTargetsRaw.reduce((acc: { [key: string]: number }, target: { name: string, value: number }) => {
@@ -314,22 +330,22 @@ export async function GET(request: Request) {
     }, {});
 
     // Calculate KPIs
-    const kpis = calculateKPIs(pipelineItems, activityLogs, kpiTargets, now);
+    const kpis = calculateKPIs(pipelineItems, activityLogs, kpiTargets, now, financeEntries);
     
     // Team Performance Analysis
-    const teamPerformance = calculateTeamPerformance(pipelineItems, activityLogs);
+    const teamPerformance = calculateTeamPerformance(pipelineItems, activityLogs, financeEntries);
     
     // Pipeline Health Assessment
-    const pipelineHealth = assessPipelineHealth(pipelineItems, activityLogs, now);
+    const pipelineHealth = assessPipelineHealth(pipelineItems, activityLogs, now, financeEntries);
     
     // Trend Analysis
-    const trends = calculateTrends(pipelineItems, activityLogs, now);
+    const trends = calculateTrends(pipelineItems, activityLogs, now, financeEntries);
     
     // Critical Actions
     const criticalActions = identifyCriticalActions(pipelineItems, activityLogs, teamPerformance, now);
     
     // Financial Summary
-    const financialSummary = calculateFinancialSummary(pipelineItems, activityLogs, now);
+    const financialSummary = calculateFinancialSummary(pipelineItems, activityLogs, now, financeEntries);
     
     // Predictive Insights
     const predictions = generatePredictiveInsights(pipelineItems, activityLogs, trends, now);

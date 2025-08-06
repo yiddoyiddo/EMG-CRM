@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { format } from 'date-fns';
+import { formatDateUK, formatDateForInput } from '@/lib/date-utils';
 import {
   Select,
   SelectContent,
@@ -61,7 +61,7 @@ export function PipelineDetail({ pipelineItemId, open, onOpenChange }: PipelineD
         phone: pipelineItem.phone,
         link: pipelineItem.link,
         expectedCloseDate: pipelineItem.expectedCloseDate 
-          ? new Date(pipelineItem.expectedCloseDate).toISOString().split('T')[0] 
+          ? formatDateForInput(pipelineItem.expectedCloseDate)
           : undefined,
       });
       
@@ -291,7 +291,7 @@ export function PipelineDetail({ pipelineItemId, open, onOpenChange }: PipelineD
                 ) : (
                   <div className="p-2 border rounded-md">
                     {pipelineItem.expectedCloseDate 
-                      ? format(new Date(pipelineItem.expectedCloseDate), 'MMM d, yyyy')
+                      ? formatDateUK(pipelineItem.expectedCloseDate)
                       : 'N/A'}
                   </div>
                 )}
@@ -366,7 +366,7 @@ export function PipelineDetail({ pipelineItemId, open, onOpenChange }: PipelineD
               <div className="sm:col-span-2">
                 <Label>Added Date</Label>
                 <div className="p-2 border rounded-md">
-                  {format(new Date(pipelineItem.addedDate), 'MMM d, yyyy h:mm a')}
+                  {formatDateUK(pipelineItem.addedDate)}
                 </div>
               </div>
             </div>
@@ -451,8 +451,8 @@ export function PipelineDetail({ pipelineItemId, open, onOpenChange }: PipelineD
                           <p className="text-sm text-muted-foreground">{log.description}</p>
                         </div>
                         <div className="text-sm text-right">
-                          <p>{format(new Date(log.timestamp), 'MMM d, yyyy')}</p>
-                          <p className="text-muted-foreground">{format(new Date(log.timestamp), 'h:mm a')}</p>
+                          <p>{formatDateUK(log.timestamp)}</p>
+                          <p className="text-muted-foreground">{new Date(log.timestamp).toLocaleString('en-GB', { hour: '2-digit', minute: '2-digit' })}</p>
                         </div>
                       </div>
                       {log.notes && (

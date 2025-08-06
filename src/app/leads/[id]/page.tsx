@@ -4,7 +4,7 @@ import { useLead, useDeleteLead } from '@/lib/hooks';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { format } from 'date-fns';
+import { formatDateUK } from '@/lib/date-utils';
 import { toast } from 'sonner';
 import { LeadToPipelineDialog } from '@/components/lead-to-pipeline-dialog';
 import { LeadUpdatesDialog } from '@/components/lead-updates-dialog';
@@ -107,7 +107,7 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
             </div>
             <div className="space-y-2">
               <h3 className="text-sm font-medium text-muted-foreground">Date Added</h3>
-              <p>{format(new Date(lead.addedDate), 'MMMM d, yyyy')}</p>
+              <p>{formatDateUK(lead.addedDate)}</p>
             </div>
             {lead.link && (
               <div className="space-y-2 md:col-span-2">

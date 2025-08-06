@@ -98,3 +98,29 @@ model KpiTarget {
   name  String  @unique
   value Int
 }
+
+model FinanceEntry {
+  id                      Int       @id @default(autoincrement())
+  company                 String
+  bdr                     String
+  leadGen                 Boolean   @default(false)
+  status                  String    // Awaiting Invoice, Cancelled, Paid, Invoiced, Late, Pending Clearance, On Hold, Sales Contacting, Net Date, Partial Payment
+  invoiceDate             DateTime?
+  dueDate                 DateTime?
+  soldAmount              Float?
+  gbpAmount               Float?
+  exchangeRate            Float?    // Exchange rate used for conversion (USD to GBP)
+  exchangeRateDate        DateTime? // Date when exchange rate was applied
+  actualGbpReceived       Float?
+  notes                   String?
+  commissionPaid          Boolean   @default(false)
+  month                   String    @default("2025-01") // Format: "2025-01" for January 2025
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+  
+  @@index([bdr])
+  @@index([status])
+  @@index([invoiceDate])
+  @@index([dueDate])
+  @@index([month])
+}

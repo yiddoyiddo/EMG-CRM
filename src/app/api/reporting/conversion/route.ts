@@ -8,9 +8,11 @@ export async function GET(req: NextRequest) {
 
   const pipelineWhere: any = {};
   const activityWhere: any = {};
+  const financeWhere: any = {};
   if (bdr && bdr !== 'all') {
     pipelineWhere.bdr = bdr;
     activityWhere.bdr = bdr;
+    financeWhere.bdr = bdr;
   }
 
   const [callsConducted, proposalsSent, agreementsSigned, listsSent, sales] = await Promise.all([
@@ -18,7 +20,7 @@ export async function GET(req: NextRequest) {
     prisma.activityLog.count({ where: { ...activityWhere, activityType: 'Proposal_Sent' } }),
     prisma.activityLog.count({ where: { ...activityWhere, activityType: 'Agreement_Sent' } }),
     prisma.activityLog.count({ where: { ...activityWhere, activityType: 'Partner_List_Sent' } }),
-    prisma.pipelineItem.count({ where: { ...pipelineWhere, status: 'Sold' } }),
+    prisma.financeEntry.count({ where: { ...financeWhere } }), // Count all finance entries as sales
   ]);
 
   return NextResponse.json({

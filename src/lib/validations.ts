@@ -316,4 +316,57 @@ export const partnerListAnalyticsSchema = z.object({
   bdr: z.enum(leadBdrEnum).optional(),
   includeConversionRates: z.boolean().optional(),
   groupBySize: z.boolean().optional(),
+});
+
+// Finance Board status options
+export const financeStatusEnum = [
+  "Awaiting Invoice",
+  "Cancelled", 
+  "Paid",
+  "Invoiced",
+  "Late",
+  "Pending Clearance",
+  "On Hold",
+  "Sales Contacting",
+  "Net Date",
+  "Partial Payment"
+] as const;
+
+// Schema for finance entry validation
+export const financeEntrySchema = z.object({
+  company: z.string().min(1, "Company is required"),
+  bdr: z.enum(leadBdrEnum),
+  leadGen: z.boolean().default(false),
+  status: z.enum(financeStatusEnum),
+  invoiceDate: dateSchema,
+  dueDate: dateSchema,
+  soldAmount: z.number().optional().nullable(),
+  gbpAmount: z.number().optional().nullable(),
+  exchangeRate: z.number().optional().nullable(),
+  exchangeRateDate: dateSchema,
+  actualGbpReceived: z.number().optional().nullable(),
+  notes: z.string().optional().nullable(),
+  commissionPaid: z.boolean().default(false),
+  month: z.string().regex(/^\d{4}-\d{2}$/, "Month must be in YYYY-MM format").default("2025-01")
+});
+
+// Schema for creating a new finance entry
+export const createFinanceEntrySchema = financeEntrySchema;
+
+// Schema for updating an existing finance entry
+export const updateFinanceEntrySchema = financeEntrySchema.partial().extend({
+  id: z.number().optional(),
+});
+
+// Schema for filtering finance entries
+export const financeFilterSchema = z.object({
+  search: z.string().optional(),
+  status: z.enum(financeStatusEnum).optional(),
+  bdr: z.enum(leadBdrEnum).optional(),
+  month: z.string().regex(/^\d{4}-\d{2}$/, "Month must be in YYYY-MM format").optional(),
+  commissionPaid: z.boolean().optional(),
+  dateFrom: dateSchema,
+  dateTo: dateSchema,
+  page: z.number().default(1),
+  pageSize: z.number().default(10),
 }); 

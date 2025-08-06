@@ -17,10 +17,25 @@ export async function GET() {
       },
     });
 
+    // Get finance entries for sales data
+    const financeEntries = await prisma.financeEntry.findMany({
+      select: {
+        bdr: true,
+        status: true,
+        soldAmount: true,
+        gbpAmount: true,
+        invoiceDate: true,
+        createdAt: true,
+        month: true,
+      },
+    });
+
     // Calculate BDR statistics
     const bdrCounts: { [key: string]: number } = {};
     let callsCount = 0;
     let agreementsCount = 0;
+    let salesCount = 0;
+    let totalRevenue = 0;
     
     const now = new Date();
     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -44,6 +59,12 @@ export async function GET() {
       }
     });
 
+    // Calculate sales statistics from finance entries
+    financeEntries.forEach(entry => {
+      salesCount++;
+      totalRevenue += entry.gbpAmount || 0;
+    });
+
     // Create BDR stats array
     const bdrStats = Object.entries(bdrCounts).map(([bdr, count]) => ({
       bdr,
@@ -53,10 +74,20 @@ export async function GET() {
     // Calculate time-based metrics (approximated)
     const callsThisWeek = Math.floor(callsCount * 0.3);
     const agreementsThisMonth = Math.floor(agreementsCount * 0.4);
+    const salesThisMonth = financeEntries.filter(entry => {
+      const currentMonth = new Date().toISOString().slice(0, 7);
+      return entry.month === currentMonth;
+    }).length;
+    const revenueThisMonth = financeEntries.filter(entry => {
+      const currentMonth = new Date().toISOString().slice(0, 7);
+      return entry.month === currentMonth;
+    }).reduce((sum, entry) => sum + (entry.gbpAmount || 0), 0);
 
     const teamStats = {
       totalLeads,
       totalPipelineItems: pipelineItems.length,
+      totalSales: salesCount,
+      totalRevenue: totalRevenue,
       callsThisWeek,
       callsLastWeek: Math.max(0, callsThisWeek - 2),
       callsNextWeek: callsThisWeek + 3,
@@ -65,6 +96,8 @@ export async function GET() {
       agreementsLastWeek: Math.floor(agreementsThisMonth / 4),
       agreementsThisMonth,
       agreementsLastMonth: Math.floor(agreementsThisMonth * 0.8),
+      salesThisMonth,
+      revenueThisMonth,
     };
 
     return NextResponse.json({ teamStats, bdrStats });
@@ -75,6 +108,8 @@ export async function GET() {
       teamStats: {
         totalLeads: 0,
         totalPipelineItems: 0,
+        totalSales: 0,
+        totalRevenue: 0,
         callsThisWeek: 0,
         callsLastWeek: 0,
         callsNextWeek: 0,
@@ -83,6 +118,8 @@ export async function GET() {
         agreementsLastWeek: 0,
         agreementsThisMonth: 0,
         agreementsLastMonth: 0,
+        salesThisMonth: 0,
+        revenueThisMonth: 0,
       },
       bdrStats: []
     }, { status: 500 });

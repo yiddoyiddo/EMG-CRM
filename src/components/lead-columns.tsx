@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { format } from "date-fns";
+import { formatDateUK } from "@/lib/date-utils";
 import { createSelectColumn } from "./leads-table";
 import { useRouter } from "next/navigation";
 import { useDeleteLead } from "@/lib/hooks";
@@ -186,7 +186,7 @@ export function useLeadColumns(): ColumnDef<Lead, unknown>[] {
       cell: ({ row }) => {
         const date = row.getValue("addedDate") as string;
         return date ? (
-          <div className="whitespace-nowrap">{format(new Date(date), "MMM d, yyyy")}</div>
+          <div className="whitespace-nowrap">{formatDateUK(date)}</div>
         ) : (
           "-"
         );
@@ -213,7 +213,7 @@ export function useLeadColumns(): ColumnDef<Lead, unknown>[] {
       cell: ({ row }) => {
         const date = row.getValue("lastUpdated") as string;
         return date ? (
-          <div className="whitespace-nowrap">{format(new Date(date), "MMM d, yyyy")}</div>
+          <div className="whitespace-nowrap">{formatDateUK(date)}</div>
         ) : (
           "-"
         );

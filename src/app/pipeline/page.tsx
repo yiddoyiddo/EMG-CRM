@@ -11,9 +11,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Users, RefreshCcw } from 'lucide-react';
-// import { LayoutGrid, Table2 } from 'lucide-react'; // Disabled - available for future restoration
-// import { PipelineBoard } from '@/components/pipeline-board'; // Disabled - available for future restoration
+import { Users, RefreshCcw, LayoutGrid, Table2 } from 'lucide-react';
+import { PipelineBoardEnhanced } from '@/components/pipeline-board-enhanced';
 import { PipelineTable } from '@/components/pipeline-table';
 import { usePipelineItems, useBdrManager } from '@/lib/hooks';
 import { AddBdrDialog } from '@/components/ui/add-bdr-dialog';
@@ -21,7 +20,7 @@ import { useQueryClient } from '@tanstack/react-query';
 
 // Define the BDR type for TypeScript
 type BdrType = string;
-// type ViewType = 'kanban' | 'table'; // Disabled - available for future restoration
+type ViewType = 'board' | 'table';
 
 function ErrorFallback({ error, resetErrorBoundary }: { error: Error; resetErrorBoundary: () => void }) {
   return (
@@ -36,7 +35,7 @@ function ErrorFallback({ error, resetErrorBoundary }: { error: Error; resetError
 function PipelineContent() {
   const { bdrs, addBdr } = useBdrManager();
   const [selectedBdr, setSelectedBdr] = useState<BdrType>(bdrs[0] || '');
-  // const [viewType, setViewType] = useState<ViewType>('table'); // Disabled - available for future restoration
+  const [viewType, setViewType] = useState<ViewType>('board');
   const queryClient = useQueryClient();
 
   const { data, isLoading, refetch } = usePipelineItems({
@@ -71,6 +70,28 @@ function PipelineContent() {
             <p className="text-muted-foreground">Track and manage your deals through the sales process</p>
           </div>
           <div className="flex items-center gap-2">
+            {/* View Toggle */}
+            <div className="flex items-center border rounded-md">
+              <Button
+                variant={viewType === 'board' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewType('board')}
+                className="rounded-r-none"
+              >
+                <LayoutGrid className="h-4 w-4 mr-1" />
+                Board
+              </Button>
+              <Button
+                variant={viewType === 'table' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewType('table')}
+                className="rounded-l-none"
+              >
+                <Table2 className="h-4 w-4 mr-1" />
+                Table
+              </Button>
+            </div>
+            
             <div className="flex items-center">
               <Users className="mr-2 h-4 w-4 text-muted-foreground" />
               <span className="mr-2 text-sm text-muted-foreground">BDR:</span>
@@ -99,11 +120,20 @@ function PipelineContent() {
           </div>
         </div>
 
-        <PipelineTable 
-          items={pipelineItems} 
-          onRefresh={handleRefresh}
-          selectedBdr={selectedBdr}
-        />
+        {viewType === 'board' ? (
+          <PipelineBoardEnhanced
+            items={pipelineItems}
+            isLoading={isLoading}
+            selectedBdr={selectedBdr}
+            onRefresh={handleRefresh}
+          />
+        ) : (
+          <PipelineTable 
+            items={pipelineItems} 
+            onRefresh={handleRefresh}
+            selectedBdr={selectedBdr}
+          />
+        )}
       </div>
     </>
   );

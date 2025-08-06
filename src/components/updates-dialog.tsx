@@ -59,7 +59,8 @@ export function UpdatesDialog({ pipelineItem, trigger }: UpdatesDialogProps) {
     log.activityType === 'BDR_Update' || 
     log.activityType === 'Note_Added' ||
     log.activityType === 'Status_Change' ||
-    log.activityType === 'Pipeline_Move'
+    log.activityType === 'Pipeline_Move' ||
+    log.activityType === 'Deal_Closed'
   ) || [];
 
   const handleSubmitUpdate = async () => {
@@ -107,6 +108,8 @@ export function UpdatesDialog({ pipelineItem, trigger }: UpdatesDialogProps) {
         return <Clock className="h-4 w-4 text-orange-600" />;
       case 'Pipeline_Move':
         return <Clock className="h-4 w-4 text-purple-600" />;
+      case 'Deal_Closed':
+        return <MessageSquare className="h-4 w-4 text-green-600" />;
       default:
         return <User className="h-4 w-4 text-gray-600" />;
     }
@@ -120,6 +123,8 @@ export function UpdatesDialog({ pipelineItem, trigger }: UpdatesDialogProps) {
         return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200';
       case 'Pipeline_Move':
         return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200';
+      case 'Deal_Closed':
+        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
       default:
         return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
     }
@@ -222,7 +227,9 @@ export function UpdatesDialog({ pipelineItem, trigger }: UpdatesDialogProps) {
                             variant="secondary" 
                             className={`text-xs ${getActivityBadgeColor(activity.activityType)}`}
                           >
-                            {activity.activityType === 'BDR_Update' ? 'Update' : activity.activityType.replace('_', ' ')}
+                            {activity.activityType === 'BDR_Update' ? 'Update' : 
+                             activity.activityType === 'Deal_Closed' ? 'Deal Closed' :
+                             activity.activityType.replace('_', ' ')}
                           </Badge>
                           <span className="text-xs text-muted-foreground">
                             {formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true })}

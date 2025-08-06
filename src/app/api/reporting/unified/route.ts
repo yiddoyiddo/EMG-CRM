@@ -230,7 +230,7 @@ export async function GET() {
     const lastMonthEnd = endOfMonth(subMonths(now, 1));
 
     // Get all data in parallel
-    const [allPipelineItems, allLeads, activityLogs] = await Promise.all([
+    const [allPipelineItems, allLeads, activityLogs, financeEntries] = await Promise.all([
       prisma.pipelineItem.findMany({
         select: {
           id: true,
@@ -263,6 +263,18 @@ export async function GET() {
           pipelineItemId: true,
           previousStatus: true,
           newStatus: true,
+        },
+      }),
+      prisma.financeEntry.findMany({
+        select: {
+          id: true,
+          bdr: true,
+          status: true,
+          soldAmount: true,
+          gbpAmount: true,
+          invoiceDate: true,
+          createdAt: true,
+          month: true,
         },
       }),
     ]);
@@ -337,6 +349,15 @@ export async function GET() {
       }
     });
 
+    // Group finance entries by BDR for sales analysis
+    const bdrFinanceData: { [key: string]: typeof financeEntries } = {};
+    financeEntries.forEach(entry => {
+      if (entry.bdr) {
+        if (!bdrFinanceData[entry.bdr]) bdrFinanceData[entry.bdr] = [];
+        bdrFinanceData[entry.bdr].push(entry);
+      }
+    });
+
     // Get KPI targets for individual BDRs (fetch once outside the loop)
     const kpiTargetsRaw = await prisma.kpiTarget.findMany();
     const kpiTargets = kpiTargetsRaw.reduce((acc: { [key: string]: number }, target: { name: string, value: number }) => {
@@ -347,6 +368,7 @@ export async function GET() {
     // Calculate detailed BDR metrics
     const bdrPerformance: DetailedBDRMetrics[] = Object.entries(bdrData).map(([bdrName, items]) => {
       const bdrActivityLogs = activityLogs.filter(log => log.bdr === bdrName);
+      const bdrFinanceEntries = bdrFinanceData[bdrName] || [];
       
       // Calculate conversion funnel for this BDR
       const bdrFunnel = calculateConversionFunnel(items);
@@ -357,6 +379,14 @@ export async function GET() {
       );
       const thisMonthItems = items.filter(item => 
         item.lastUpdated >= monthStart && item.lastUpdated <= monthEnd
+      );
+
+      // Sales metrics from finance entries
+      const thisWeekSales = bdrFinanceEntries.filter(entry => 
+        entry.createdAt >= thisWeekStart && entry.createdAt <= thisWeekEnd
+      );
+      const thisMonthSales = bdrFinanceEntries.filter(entry => 
+        entry.createdAt >= monthStart && entry.createdAt <= monthEnd
       );
 
       const thisWeek = {
@@ -375,9 +405,7 @@ export async function GET() {
         listsOut: thisWeekItems.filter(item => 
           CONVERSION_FUNNEL_STAGES[4].statuses.includes(item.status as any)
         ).length,
-        sold: thisWeekItems.filter(item => 
-          CONVERSION_FUNNEL_STAGES[5].statuses.includes(item.status as any)
-        ).length,
+        sold: thisWeekSales.length, // Use finance entries for sales count
       };
 
       const thisMonth = {
@@ -396,9 +424,7 @@ export async function GET() {
         listsOut: thisMonthItems.filter(item => 
           CONVERSION_FUNNEL_STAGES[4].statuses.includes(item.status as any)
         ).length,
-        sold: thisMonthItems.filter(item => 
-          CONVERSION_FUNNEL_STAGES[5].statuses.includes(item.status as any)
-        ).length,
+        sold: thisMonthSales.length, // Use finance entries for sales count
       };
 
       // Forecasting metrics (most important)
@@ -423,15 +449,9 @@ export async function GET() {
         item.callDate <= nextWeekEnd
       ).length;
 
-      // Revenue potential calculation
-      const revenueItems = items.filter(item => item.value && item.probability);
-      const next30DaysRevenuePotential = revenueItems
-        .filter(item => 
-          item.expectedCloseDate && 
-          item.expectedCloseDate <= addDays(now, 30) &&
-          !['DECLINED', 'Passed Over', 'Sold'].includes(item.status)
-        )
-        .reduce((sum, item) => sum + (item.value! * (item.probability! / 100)), 0);
+      // Revenue potential calculation from finance entries
+      const bdrRevenue = bdrFinanceEntries.reduce((sum, entry) => sum + (entry.gbpAmount || 0), 0);
+      const next30DaysRevenuePotential = bdrRevenue * 0.1; // Estimate 10% of current revenue for next 30 days
 
       // Conversion rates
       const callToProposalCount = items.filter(item => 
@@ -440,7 +460,7 @@ export async function GET() {
       const proposalToAgreementCount = items.filter(item => 
         ['Agreement - Profile', 'List Out', 'Sold'].includes(item.status)
       ).length;
-      const agreementToSoldCount = items.filter(item => item.status === 'Sold').length;
+      const agreementToSoldCount = bdrFinanceEntries.length; // Use finance entries count as sold count
       const totalProposals = items.filter(item => 
         ['Proposal - Profile', 'Proposal - Media Sales'].includes(item.status)
       ).length;
@@ -480,6 +500,10 @@ export async function GET() {
           item.lastUpdated >= weekStart && item.lastUpdated <= weekEnd
         );
         
+        const weekSales = bdrFinanceEntries.filter(entry => 
+          entry.createdAt >= weekStart && entry.createdAt <= weekEnd
+        );
+        
         weeklyTrend.push({
           week: `Week ${5 - i}`,
           callsProposed: weekItems.filter(item => item.status === 'BDR Followed Up').length,
@@ -488,7 +512,7 @@ export async function GET() {
             ['Proposal - Profile', 'Proposal - Media Sales'].includes(item.status)
           ).length,
           agreements: weekItems.filter(item => item.status === 'Agreement - Profile').length,
-          sold: weekItems.filter(item => item.status === 'Sold').length
+          sold: weekSales.length // Use finance entries for sales count
         });
       }
 
@@ -583,9 +607,12 @@ export async function GET() {
       .filter(item => item.value && item.probability)
       .reduce((sum, item) => sum + (item.value! * (item.probability! / 100)), 0);
 
-    const monthlyRecurringRevenue = allPipelineItems
-      .filter(item => item.status === 'Sold' && item.value)
-      .reduce((sum, item) => sum + item.value!, 0);
+    const monthlyRecurringRevenue = financeEntries
+      .filter(entry => {
+        const currentMonth = new Date().toISOString().slice(0, 7);
+        return entry.month === currentMonth;
+      })
+      .reduce((sum, entry) => sum + (entry.gbpAmount || 0), 0);
 
     // Daily metrics for activity analysis
     const dailyMetrics = [];
@@ -598,6 +625,11 @@ export async function GET() {
         item.addedDate >= dayStart && item.addedDate <= dayEnd
       );
       
+      const daySales = financeEntries.filter(entry => 
+        entry.invoiceDate && 
+        entry.invoiceDate >= dayStart && entry.invoiceDate <= dayEnd
+      );
+      
       const dayMetrics = {
         date: format(date, 'MMM dd'),
         callsProposed: dayItems.filter(item => item.status === 'BDR Followed Up').length,
@@ -606,7 +638,7 @@ export async function GET() {
           ['Proposal - Profile', 'Proposal - Media Sales'].includes(item.status)
         ).length,
         agreements: dayItems.filter(item => item.status === 'Agreement - Profile').length,
-        sold: dayItems.filter(item => item.status === 'Sold').length,
+        sold: daySales.length, // Use finance entries for sales count
         totalActivity: dayItems.length
       };
       
@@ -747,11 +779,10 @@ export async function GET() {
               item.lastUpdated >= lastWeekStart && 
               item.lastUpdated <= lastWeekEnd
             ).length,
-            sold: allPipelineItems.filter(item => 
-              item.status === 'Sold' && 
-              item.lastUpdated >= lastWeekStart && 
-              item.lastUpdated <= lastWeekEnd
-            ).length,
+            sold: financeEntries.filter(entry => 
+              entry.createdAt >= lastWeekStart && 
+              entry.createdAt <= lastWeekEnd
+            ).length, // Use finance entries for sales count
           },
           {
             period: 'This Week',
@@ -775,11 +806,10 @@ export async function GET() {
               item.lastUpdated >= thisWeekStart && 
               item.lastUpdated <= thisWeekEnd
             ).length,
-            sold: allPipelineItems.filter(item => 
-              item.status === 'Sold' && 
-              item.lastUpdated >= thisWeekStart && 
-              item.lastUpdated <= thisWeekEnd
-            ).length,
+            sold: financeEntries.filter(entry => 
+              entry.createdAt >= thisWeekStart && 
+              entry.createdAt <= thisWeekEnd
+            ).length, // Use finance entries for sales count
           }
         ],
         activityHeatmap: [] // Placeholder for future implementation

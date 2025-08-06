@@ -74,7 +74,8 @@ export async function GET(req: NextRequest) {
                   { activityType: 'BDR_Update' },
                   { activityType: 'Note_Added' },
                   { activityType: 'Status_Change' },
-                  { activityType: 'Pipeline_Move' }
+                  { activityType: 'Pipeline_Move' },
+                  { activityType: 'Deal_Closed' }
                 ]
               }
             }
@@ -88,7 +89,8 @@ export async function GET(req: NextRequest) {
               { activityType: 'BDR_Update' },
               { activityType: 'Note_Added' },
               { activityType: 'Status_Change' },
-              { activityType: 'Pipeline_Move' }
+              { activityType: 'Pipeline_Move' },
+              { activityType: 'Deal_Closed' }
             ]
           }
         }

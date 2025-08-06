@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -452,8 +453,18 @@ export default function SalesPerformancePage() {
           {/* Conversion Funnel */}
           <Card>
             <CardHeader>
-              <CardTitle>Conversion Funnel</CardTitle>
-              <CardDescription>Track leads through each stage of the sales process</CardDescription>
+              <CardTitle className="flex items-center justify-between">
+                <div>
+                  <span>Conversion Funnel</span>
+                  <CardDescription className="mt-1">Track leads through each stage of the sales process</CardDescription>
+                </div>
+                <Link href="/finance">
+                  <Button variant="outline" className="flex items-center gap-2">
+                    <DollarSign className="h-4 w-4" />
+                    Finance Overview
+                  </Button>
+                </Link>
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-6 gap-4">

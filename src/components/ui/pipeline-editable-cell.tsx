@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Check, X, Edit, CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import { PipelineItem, useUpdatePipelineItem, useCreateActivityLog } from '@/lib/hooks';
 import { toast } from 'sonner';
-import { format } from 'date-fns';
+import { formatDateUKShort, formatDateForInput } from '@/lib/date-utils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 
@@ -277,7 +277,7 @@ export function PipelineEditableCell({
               )}
             >
               {value ? (
-                format(new Date(value), "dd/MM/yy")
+                formatDateUKShort(value)
               ) : (
                 <span>{placeholder || 'Click to set date'}</span>
               )}
