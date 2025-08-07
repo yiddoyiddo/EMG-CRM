@@ -182,7 +182,7 @@ export async function GET(req: NextRequest) {
       });
       
       // Group entries by month
-      const groupedEntries = financeEntries.reduce((acc: { [key: string]: any[] }, entry) => {
+      const groupedEntries = financeEntries.reduce((acc: { [key: string]: typeof financeEntries }, entry) => {
         if (!acc[entry.month]) {
           acc[entry.month] = [];
         }

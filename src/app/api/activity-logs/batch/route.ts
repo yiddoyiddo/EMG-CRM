@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
     });
     
     // Group logs by pipeline item ID
-    const groupedLogs = logs.reduce((acc: Record<number, typeof logs>, log: any) => {
+    const groupedLogs = logs.reduce((acc: Record<number, typeof logs>, log) => {
       if (log.pipelineItemId) {
         if (!acc[log.pipelineItemId]) {
           acc[log.pipelineItemId] = [];
@@ -50,10 +50,11 @@ export async function GET(req: NextRequest) {
     }, {} as Record<number, typeof logs>);
     
     return NextResponse.json({ groupedLogs });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error fetching batch activity logs:", error);
+    const errorMessage = error instanceof Error ? error.message : "Failed to fetch batch activity logs";
     return NextResponse.json(
-      { error: error.message || "Failed to fetch batch activity logs" },
+      { error: errorMessage },
       { status: 500 }
     );
   }

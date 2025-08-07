@@ -9,7 +9,11 @@
     "lint": "next lint",
     "seed": "ts-node scripts/seed-kpi-targets.ts",
     "test": "vitest run",
-    "e2e": "cypress run"
+    "e2e": "cypress run",
+    "postinstall": "prisma generate",
+    "db:deploy": "prisma migrate deploy",
+    "db:seed": "npm run seed",
+    "vercel-build": "npm run build"
   },
   "dependencies": {
     "@faker-js/faker": "^9.9.0",

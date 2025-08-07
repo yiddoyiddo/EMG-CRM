@@ -35,6 +35,14 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
 
+### Quick Deployment
+
+1. **Set up a PostgreSQL database** (Vercel Postgres, Neon, Supabase, etc.)
+2. **Configure environment variables** (see `env.template` for required variables)
+3. **Deploy to Vercel** using the Vercel CLI or GitHub integration
+
+For detailed deployment instructions, see [DEPLOYMENT.md](./DEPLOYMENT.md).
+
 ---
 
 ## EMG-CRM Reporting Suite

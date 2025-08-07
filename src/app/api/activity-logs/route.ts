@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { createActivityLogSchema, activityLogFilterSchema } from "@/lib/validations";
+import { createActivityLogSchema } from "@/lib/validations";
 
 export async function GET(req: NextRequest) {
   try {
@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
     const skip = (page - 1) * pageSize;
     
     // Build the where clause
-    const where: any = {};
+    const where: Record<string, unknown> = {};
     
     if (bdr) where.bdr = bdr;
     if (activityType) where.activityType = activityType;
@@ -70,10 +70,11 @@ export async function GET(req: NextRequest) {
       pageSize,
       totalPages,
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error fetching activity logs:", error);
+    const errorMessage = error instanceof Error ? error.message : "Failed to fetch activity logs";
     return NextResponse.json(
-      { error: error.message || "Failed to fetch activity logs" },
+      { error: errorMessage },
       { status: 500 }
     );
   }
@@ -114,10 +115,11 @@ export async function POST(req: NextRequest) {
     ]);
     
     return NextResponse.json(activityLog, { status: 201 });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error creating activity log:", error);
+    const errorMessage = error instanceof Error ? error.message : "Failed to create activity log";
     return NextResponse.json(
-      { error: error.message || "Failed to create activity log" },
+      { error: errorMessage },
       { status: 400 }
     );
   }
