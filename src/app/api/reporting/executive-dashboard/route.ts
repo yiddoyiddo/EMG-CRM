@@ -253,7 +253,7 @@ export async function GET(request: Request) {
       leadWhere.bdr = bdr;
     }
 
-    // Get comprehensive data
+    // Get comprehensive data with optimized queries
     const [
       pipelineItems,
       activityLogs,
@@ -294,6 +294,8 @@ export async function GET(request: Request) {
           pipelineItemId: true,
           notes: true,
         },
+        orderBy: { timestamp: 'desc' },
+        take: 1000, // Limit to most recent 1000 for performance
       }),
       prisma.lead.findMany({
         where: leadWhere,
@@ -308,7 +310,9 @@ export async function GET(request: Request) {
         select: { bdr: true },
         distinct: ['bdr']
       }).then(p => p.map(i => i.bdr).filter(Boolean) as string[]),
-      prisma.kpiTarget.findMany(),
+      prisma.kpiTarget.findMany({
+        select: { name: true, value: true }
+      }),
       prisma.financeEntry.findMany({
         where: financeWhere,
         select: {
@@ -321,6 +325,8 @@ export async function GET(request: Request) {
           createdAt: true,
           month: true,
         },
+        orderBy: { createdAt: 'desc' },
+        take: 1000, // Limit to most recent 1000 for performance
       }),
     ]);
 

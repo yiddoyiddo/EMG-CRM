@@ -3,8 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:../db/dev.db"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model Lead {
@@ -22,6 +22,13 @@ model Lead {
   email         String?        @unique
   activityLogs  ActivityLog[]
   pipelineItems PipelineItem[]
+
+  @@index([bdr])
+  @@index([status])
+  @@index([source])
+  @@index([addedDate])
+  @@index([bdr, status])
+  @@index([bdr, addedDate])
 }
 
 model PipelineItem {
@@ -69,6 +76,23 @@ model PipelineItem {
   @@index([agreementDate])
   @@index([partnerListSentDate])
   @@index([firstSaleDate])
+  @@index([category])
+  @@index([status])
+  @@index([lastUpdated])
+  @@index([addedDate])
+  @@index([parentId])
+  @@index([leadId])
+  @@index([bdr, status])
+  @@index([bdr, category])
+  @@index([bdr, lastUpdated])
+  @@index([status, lastUpdated])
+  @@index([category, status])
+  @@index([bdr, callDate])
+  @@index([bdr, agreementDate])
+  @@index([bdr, partnerListSentDate])
+  @@index([bdr, firstSaleDate])
+  @@index([parentId, sortOrder])
+  @@index([isSublist, parentId])
 }
 
 model ActivityLog {
@@ -91,6 +115,15 @@ model ActivityLog {
 
   @@index([bdr])
   @@index([activityType, timestamp])
+  @@index([timestamp])
+  @@index([activityType])
+  @@index([pipelineItemId])
+  @@index([leadId])
+  @@index([bdr, timestamp])
+  @@index([bdr, activityType])
+  @@index([pipelineItemId, timestamp])
+  @@index([activityType, bdr])
+  @@index([timestamp, bdr])
 }
 
 model KpiTarget {
@@ -123,4 +156,12 @@ model FinanceEntry {
   @@index([invoiceDate])
   @@index([dueDate])
   @@index([month])
+  @@index([createdAt])
+  @@index([bdr, status])
+  @@index([bdr, month])
+  @@index([status, month])
+  @@index([bdr, createdAt])
+  @@index([month, createdAt])
+  @@index([status, createdAt])
+  @@index([bdr, status, month])
 }

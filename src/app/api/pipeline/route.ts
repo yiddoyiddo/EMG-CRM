@@ -56,16 +56,72 @@ export async function GET(req: NextRequest) {
     // Get total count for pagination (only top-level items)
     const total = await prisma.pipelineItem.count({ where: whereWithParent });
     
-    // Get pipeline items with latest activity log and children (sublists)
+    // Get pipeline items with optimized query using select
     const items = await prisma.pipelineItem.findMany({
       where: whereWithParent,
       skip,
       take: parsedParams.pageSize,
       orderBy: { lastUpdated: 'desc' },
-      include: {
+      select: {
+        id: true,
+        name: true,
+        title: true,
+        bdr: true,
+        company: true,
+        category: true,
+        status: true,
+        value: true,
+        probability: true,
+        expectedCloseDate: true,
+        callDate: true,
+        link: true,
+        phone: true,
+        notes: true,
+        email: true,
+        leadId: true,
+        addedDate: true,
+        lastUpdated: true,
+        isSublist: true,
+        parentId: true,
+        sublistName: true,
+        sortOrder: true,
+        agreementDate: true,
+        partnerListDueDate: true,
+        partnerListSentDate: true,
+        firstSaleDate: true,
+        partnerListSize: true,
+        totalSalesFromList: true,
         children: {
           orderBy: { sortOrder: 'asc' },
-          include: {
+          select: {
+            id: true,
+            name: true,
+            title: true,
+            bdr: true,
+            company: true,
+            category: true,
+            status: true,
+            value: true,
+            probability: true,
+            expectedCloseDate: true,
+            callDate: true,
+            link: true,
+            phone: true,
+            notes: true,
+            email: true,
+            leadId: true,
+            addedDate: true,
+            lastUpdated: true,
+            isSublist: true,
+            parentId: true,
+            sublistName: true,
+            sortOrder: true,
+            agreementDate: true,
+            partnerListDueDate: true,
+            partnerListSentDate: true,
+            firstSaleDate: true,
+            partnerListSize: true,
+            totalSalesFromList: true,
             activityLogs: {
               orderBy: { timestamp: 'desc' },
               take: 1,
@@ -77,13 +133,21 @@ export async function GET(req: NextRequest) {
                   { activityType: 'Pipeline_Move' },
                   { activityType: 'Deal_Closed' }
                 ]
+              },
+              select: {
+                id: true,
+                timestamp: true,
+                bdr: true,
+                activityType: true,
+                description: true,
+                notes: true,
               }
             }
           }
         },
         activityLogs: {
           orderBy: { timestamp: 'desc' },
-          take: 1, // Only get the latest activity log
+          take: 1,
           where: {
             OR: [
               { activityType: 'BDR_Update' },
@@ -92,6 +156,14 @@ export async function GET(req: NextRequest) {
               { activityType: 'Pipeline_Move' },
               { activityType: 'Deal_Closed' }
             ]
+          },
+          select: {
+            id: true,
+            timestamp: true,
+            bdr: true,
+            activityType: true,
+            description: true,
+            notes: true,
           }
         }
       }
