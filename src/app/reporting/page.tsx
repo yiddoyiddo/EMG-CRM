@@ -52,11 +52,11 @@ export default function ReportingPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'excellent': return 'text-green-600 bg-green-50 border-green-200';
-      case 'good': return 'text-blue-600 bg-blue-50 border-blue-200';
-      case 'needs_attention': return 'text-yellow-600 bg-yellow-50 border-yellow-200';
-      case 'critical': return 'text-red-600 bg-red-50 border-red-200';
-      default: return 'text-gray-600 bg-gray-50 border-gray-200';
+      case 'excellent': return 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800';
+      case 'good': return 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800';
+      case 'needs_attention': return 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800';
+      case 'critical': return 'text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800';
+      default: return 'text-muted-foreground bg-muted border';
     }
   };
 
@@ -87,7 +87,7 @@ export default function ReportingPage() {
               Call Volume
               <Tooltip>
                 <TooltipTrigger>
-                  <HelpCircle className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                  <HelpCircle className="h-4 w-4 text-muted-foreground hover:text-foreground" />
                 </TooltipTrigger>
                 <TooltipContent className="max-w-xs">
                   <p><strong>Detailed call volume analysis:</strong> Track call patterns, BDR performance, and call outcomes</p>
@@ -108,7 +108,7 @@ export default function ReportingPage() {
               Agreement Tracking
               <Tooltip>
                 <TooltipTrigger>
-                  <HelpCircle className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                  <HelpCircle className="h-4 w-4 text-muted-foreground hover:text-foreground" />
                 </TooltipTrigger>
                 <TooltipContent className="max-w-xs">
                   <p><strong>Agreement lifecycle tracking:</strong> Monitor agreement generation, status, and outcomes</p>
@@ -129,7 +129,7 @@ export default function ReportingPage() {
               Lists Out
               <Tooltip>
                 <TooltipTrigger>
-                  <HelpCircle className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                  <HelpCircle className="h-4 w-4 text-muted-foreground hover:text-foreground" />
                 </TooltipTrigger>
                 <TooltipContent className="max-w-xs">
                   <p><strong>Partner list performance:</strong> Track list generation, outcomes, and revenue impact</p>
@@ -150,7 +150,7 @@ export default function ReportingPage() {
               Conversion Funnel
               <Tooltip>
                 <TooltipTrigger>
-                  <HelpCircle className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                  <HelpCircle className="h-4 w-4 text-muted-foreground hover:text-foreground" />
                 </TooltipTrigger>
                 <TooltipContent className="max-w-xs">
                   <p><strong>Sales funnel analysis:</strong> Track conversion rates at each stage of the sales process</p>
@@ -177,7 +177,7 @@ export default function ReportingPage() {
             <CardContent className="space-y-6">
               {/* This Week Row */}
               <div>
-                <h3 className="text-lg font-semibold mb-4 text-blue-600">This Week</h3>
+                <h3 className="text-lg font-semibold mb-4 text-foreground">This Week</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   <Card className={`border-2 ${getStatusColor(data.dashboard.kpis.thisWeek.callVolume.status)}`}>
                     <CardHeader className="pb-2">
@@ -186,7 +186,7 @@ export default function ReportingPage() {
                         Call Volume
                         <Tooltip>
                           <TooltipTrigger>
-                            <HelpCircle className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                            <HelpCircle className="h-4 w-4 text-muted-foreground hover:text-foreground" />
                           </TooltipTrigger>
                           <TooltipContent className="max-w-xs">
                             <p><strong>What it measures:</strong> Total completed calls this week</p>
@@ -202,7 +202,7 @@ export default function ReportingPage() {
                         value={(data.dashboard.kpis.thisWeek.callVolume.current / data.dashboard.kpis.thisWeek.callVolume.target) * 100}
                         className="mt-2"
                       />
-                      <p className="text-xs text-gray-600 mt-1">
+                      <p className="text-xs text-muted-foreground mt-1">
                         Target: {data.dashboard.kpis.thisWeek.callVolume.target}
                       </p>
                     </CardContent>
@@ -215,7 +215,7 @@ export default function ReportingPage() {
                         Agreements
                         <Tooltip>
                           <TooltipTrigger>
-                            <HelpCircle className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                            <HelpCircle className="h-4 w-4 text-muted-foreground hover:text-foreground" />
                           </TooltipTrigger>
                           <TooltipContent className="max-w-xs">
                             <p><strong>What it measures:</strong> Total agreements sent this week</p>
@@ -231,7 +231,7 @@ export default function ReportingPage() {
                         value={(data.dashboard.kpis.thisWeek.agreements.current / data.dashboard.kpis.thisWeek.agreements.target) * 100}
                         className="mt-2"
                       />
-                      <p className="text-xs text-gray-600 mt-1">
+                      <p className="text-xs text-muted-foreground mt-1">
                         Target: {data.dashboard.kpis.thisWeek.agreements.target}
                       </p>
                     </CardContent>
@@ -244,7 +244,7 @@ export default function ReportingPage() {
                         Lists Out
                         <Tooltip>
                           <TooltipTrigger>
-                            <HelpCircle className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                            <HelpCircle className="h-4 w-4 text-muted-foreground hover:text-foreground" />
                           </TooltipTrigger>
                           <TooltipContent className="max-w-xs">
                             <p><strong>What it measures:</strong> Total partner lists sent this week</p>
@@ -260,7 +260,7 @@ export default function ReportingPage() {
                         value={(data.dashboard.kpis.thisWeek.listsOut.current / data.dashboard.kpis.thisWeek.listsOut.target) * 100}
                         className="mt-2"
                       />
-                      <p className="text-xs text-gray-600 mt-1">
+                      <p className="text-xs text-muted-foreground mt-1">
                         Target: {data.dashboard.kpis.thisWeek.listsOut.target}
                       </p>
                     </CardContent>
@@ -273,7 +273,7 @@ export default function ReportingPage() {
                         Sales
                         <Tooltip>
                           <TooltipTrigger>
-                            <HelpCircle className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                            <HelpCircle className="h-4 w-4 text-muted-foreground hover:text-foreground" />
                           </TooltipTrigger>
                           <TooltipContent className="max-w-xs">
                             <p><strong>What it measures:</strong> Total sales this week</p>
@@ -289,7 +289,7 @@ export default function ReportingPage() {
                         value={(data.dashboard.kpis.thisWeek.sales.current / data.dashboard.kpis.thisWeek.sales.target) * 100}
                         className="mt-2"
                       />
-                      <p className="text-xs text-gray-600 mt-1">
+                      <p className="text-xs text-muted-foreground mt-1">
                         Target: {data.dashboard.kpis.thisWeek.sales.target}
                       </p>
                     </CardContent>
@@ -308,7 +308,7 @@ export default function ReportingPage() {
                         Call Volume
                         <Tooltip>
                           <TooltipTrigger>
-                            <HelpCircle className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                            <HelpCircle className="h-4 w-4 text-muted-foreground hover:text-foreground" />
                           </TooltipTrigger>
                           <TooltipContent className="max-w-xs">
                             <p><strong>What it measures:</strong> Total completed calls last week</p>
@@ -324,7 +324,7 @@ export default function ReportingPage() {
                         value={(data.dashboard.kpis.lastWeek.callVolume.current / data.dashboard.kpis.lastWeek.callVolume.target) * 100}
                         className="mt-2"
                       />
-                      <p className="text-xs text-gray-600 mt-1">
+                      <p className="text-xs text-muted-foreground mt-1">
                         Target: {data.dashboard.kpis.lastWeek.callVolume.target}
                       </p>
                     </CardContent>
@@ -337,7 +337,7 @@ export default function ReportingPage() {
                         Agreements
                         <Tooltip>
                           <TooltipTrigger>
-                            <HelpCircle className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                            <HelpCircle className="h-4 w-4 text-muted-foreground hover:text-foreground" />
                           </TooltipTrigger>
                           <TooltipContent className="max-w-xs">
                             <p><strong>What it measures:</strong> Total agreements sent last week</p>
@@ -353,7 +353,7 @@ export default function ReportingPage() {
                         value={(data.dashboard.kpis.lastWeek.agreements.current / data.dashboard.kpis.lastWeek.agreements.target) * 100}
                         className="mt-2"
                       />
-                      <p className="text-xs text-gray-600 mt-1">
+                      <p className="text-xs text-muted-foreground mt-1">
                         Target: {data.dashboard.kpis.lastWeek.agreements.target}
                       </p>
                     </CardContent>
@@ -366,7 +366,7 @@ export default function ReportingPage() {
                         Lists Out
                         <Tooltip>
                           <TooltipTrigger>
-                            <HelpCircle className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                            <HelpCircle className="h-4 w-4 text-muted-foreground hover:text-foreground" />
                           </TooltipTrigger>
                           <TooltipContent className="max-w-xs">
                             <p><strong>What it measures:</strong> Total partner lists sent last week</p>
@@ -382,7 +382,7 @@ export default function ReportingPage() {
                         value={(data.dashboard.kpis.lastWeek.listsOut.current / data.dashboard.kpis.lastWeek.listsOut.target) * 100}
                         className="mt-2"
                       />
-                      <p className="text-xs text-gray-600 mt-1">
+                      <p className="text-xs text-muted-foreground mt-1">
                         Target: {data.dashboard.kpis.lastWeek.listsOut.target}
                       </p>
                     </CardContent>
@@ -395,7 +395,7 @@ export default function ReportingPage() {
                         Sales
                         <Tooltip>
                           <TooltipTrigger>
-                            <HelpCircle className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                            <HelpCircle className="h-4 w-4 text-muted-foreground hover:text-foreground" />
                           </TooltipTrigger>
                           <TooltipContent className="max-w-xs">
                             <p><strong>What it measures:</strong> Total sales last week</p>
@@ -411,7 +411,7 @@ export default function ReportingPage() {
                         value={(data.dashboard.kpis.lastWeek.sales.current / data.dashboard.kpis.lastWeek.sales.target) * 100}
                         className="mt-2"
                       />
-                      <p className="text-xs text-gray-600 mt-1">
+                      <p className="text-xs text-muted-foreground mt-1">
                         Target: {data.dashboard.kpis.lastWeek.sales.target}
                       </p>
                     </CardContent>
@@ -430,7 +430,7 @@ export default function ReportingPage() {
                         Call Volume
                         <Tooltip>
                           <TooltipTrigger>
-                            <HelpCircle className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                            <HelpCircle className="h-4 w-4 text-muted-foreground hover:text-foreground" />
                           </TooltipTrigger>
                           <TooltipContent className="max-w-xs">
                             <p><strong>What it measures:</strong> Total completed calls this month</p>
@@ -446,7 +446,7 @@ export default function ReportingPage() {
                         value={(data.dashboard.kpis.thisMonth.callVolume.current / data.dashboard.kpis.thisMonth.callVolume.target) * 100}
                         className="mt-2"
                       />
-                      <p className="text-xs text-gray-600 mt-1">
+                      <p className="text-xs text-muted-foreground mt-1">
                         Target: {data.dashboard.kpis.thisMonth.callVolume.target}
                       </p>
                     </CardContent>
@@ -459,7 +459,7 @@ export default function ReportingPage() {
                         Agreements
                         <Tooltip>
                           <TooltipTrigger>
-                            <HelpCircle className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                            <HelpCircle className="h-4 w-4 text-muted-foreground hover:text-foreground" />
                           </TooltipTrigger>
                           <TooltipContent className="max-w-xs">
                             <p><strong>What it measures:</strong> Total agreements sent this month</p>
@@ -475,7 +475,7 @@ export default function ReportingPage() {
                         value={(data.dashboard.kpis.thisMonth.agreements.current / data.dashboard.kpis.thisMonth.agreements.target) * 100}
                         className="mt-2"
                       />
-                      <p className="text-xs text-gray-600 mt-1">
+                      <p className="text-xs text-muted-foreground mt-1">
                         Target: {data.dashboard.kpis.thisMonth.agreements.target}
                       </p>
                     </CardContent>
@@ -488,7 +488,7 @@ export default function ReportingPage() {
                         Lists Out
                         <Tooltip>
                           <TooltipTrigger>
-                            <HelpCircle className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                            <HelpCircle className="h-4 w-4 text-muted-foreground hover:text-foreground" />
                           </TooltipTrigger>
                           <TooltipContent className="max-w-xs">
                             <p><strong>What it measures:</strong> Total partner lists sent this month</p>
@@ -504,7 +504,7 @@ export default function ReportingPage() {
                         value={(data.dashboard.kpis.thisMonth.listsOut.current / data.dashboard.kpis.thisMonth.listsOut.target) * 100}
                         className="mt-2"
                       />
-                      <p className="text-xs text-gray-600 mt-1">
+                      <p className="text-xs text-muted-foreground mt-1">
                         Target: {data.dashboard.kpis.thisMonth.listsOut.target}
                       </p>
                     </CardContent>
@@ -517,7 +517,7 @@ export default function ReportingPage() {
                         Conversion Rate
                         <Tooltip>
                           <TooltipTrigger>
-                            <HelpCircle className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                            <HelpCircle className="h-4 w-4 text-muted-foreground hover:text-foreground" />
                           </TooltipTrigger>
                           <TooltipContent className="max-w-xs">
                             <p><strong>What it measures:</strong> Conversion rate from calls to sales this month</p>
@@ -533,7 +533,7 @@ export default function ReportingPage() {
                         value={(data.dashboard.kpis.thisMonth.conversionRate.current / data.dashboard.kpis.thisMonth.conversionRate.target) * 100}
                         className="mt-2"
                       />
-                      <p className="text-xs text-gray-600 mt-1">
+                      <p className="text-xs text-muted-foreground mt-1">
                         Target: {data.dashboard.kpis.thisMonth.conversionRate.target}%
                       </p>
                     </CardContent>
@@ -552,7 +552,7 @@ export default function ReportingPage() {
                         Call Volume
                         <Tooltip>
                           <TooltipTrigger>
-                            <HelpCircle className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                            <HelpCircle className="h-4 w-4 text-muted-foreground hover:text-foreground" />
                           </TooltipTrigger>
                           <TooltipContent className="max-w-xs">
                             <p><strong>What it measures:</strong> Total completed calls last month</p>
@@ -568,7 +568,7 @@ export default function ReportingPage() {
                         value={(data.dashboard.kpis.lastMonth.callVolume.current / data.dashboard.kpis.lastMonth.callVolume.target) * 100}
                         className="mt-2"
                       />
-                      <p className="text-xs text-gray-600 mt-1">
+                      <p className="text-xs text-muted-foreground mt-1">
                         Target: {data.dashboard.kpis.lastMonth.callVolume.target}
                       </p>
                     </CardContent>
@@ -581,7 +581,7 @@ export default function ReportingPage() {
                         Agreements
                         <Tooltip>
                           <TooltipTrigger>
-                            <HelpCircle className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                            <HelpCircle className="h-4 w-4 text-muted-foreground hover:text-foreground" />
                           </TooltipTrigger>
                           <TooltipContent className="max-w-xs">
                             <p><strong>What it measures:</strong> Total agreements sent last month</p>
@@ -597,7 +597,7 @@ export default function ReportingPage() {
                         value={(data.dashboard.kpis.lastMonth.agreements.current / data.dashboard.kpis.lastMonth.agreements.target) * 100}
                         className="mt-2"
                       />
-                      <p className="text-xs text-gray-600 mt-1">
+                      <p className="text-xs text-muted-foreground mt-1">
                         Target: {data.dashboard.kpis.lastMonth.agreements.target}
                       </p>
                     </CardContent>
@@ -610,7 +610,7 @@ export default function ReportingPage() {
                         Lists Out
                         <Tooltip>
                           <TooltipTrigger>
-                            <HelpCircle className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                            <HelpCircle className="h-4 w-4 text-muted-foreground hover:text-foreground" />
                           </TooltipTrigger>
                           <TooltipContent className="max-w-xs">
                             <p><strong>What it measures:</strong> Total partner lists sent last month</p>
@@ -626,7 +626,7 @@ export default function ReportingPage() {
                         value={(data.dashboard.kpis.lastMonth.listsOut.current / data.dashboard.kpis.lastMonth.listsOut.target) * 100}
                         className="mt-2"
                       />
-                      <p className="text-xs text-gray-600 mt-1">
+                      <p className="text-xs text-muted-foreground mt-1">
                         Target: {data.dashboard.kpis.lastMonth.listsOut.target}
                       </p>
                     </CardContent>
@@ -639,7 +639,7 @@ export default function ReportingPage() {
                         Conversion Rate
                         <Tooltip>
                           <TooltipTrigger>
-                            <HelpCircle className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                            <HelpCircle className="h-4 w-4 text-muted-foreground hover:text-foreground" />
                           </TooltipTrigger>
                           <TooltipContent className="max-w-xs">
                             <p><strong>What it measures:</strong> Conversion rate from calls to sales last month</p>
@@ -655,7 +655,7 @@ export default function ReportingPage() {
                         value={(data.dashboard.kpis.lastMonth.conversionRate.current / data.dashboard.kpis.lastMonth.conversionRate.target) * 100}
                         className="mt-2"
                       />
-                      <p className="text-xs text-gray-600 mt-1">
+                      <p className="text-xs text-muted-foreground mt-1">
                         Target: {data.dashboard.kpis.lastMonth.conversionRate.target}%
                       </p>
                     </CardContent>
@@ -674,7 +674,7 @@ export default function ReportingPage() {
                   Weekly Call Volume
                   <Tooltip>
                     <TooltipTrigger>
-                      <HelpCircle className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                      <HelpCircle className="h-4 w-4 text-muted-foreground hover:text-foreground" />
                     </TooltipTrigger>
                     <TooltipContent className="max-w-xs">
                       <p><strong>What it shows:</strong> Call volume trends over the last 4 weeks</p>
@@ -705,7 +705,7 @@ export default function ReportingPage() {
                   Monthly Agreements
                   <Tooltip>
                     <TooltipTrigger>
-                      <HelpCircle className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                      <HelpCircle className="h-4 w-4 text-muted-foreground hover:text-foreground" />
                     </TooltipTrigger>
                     <TooltipContent className="max-w-xs">
                       <p><strong>What it shows:</strong> Agreement volume trends over the last 4 months</p>
@@ -736,7 +736,7 @@ export default function ReportingPage() {
                   Quarterly Lists Out
                   <Tooltip>
                     <TooltipTrigger>
-                      <HelpCircle className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                      <HelpCircle className="h-4 w-4 text-muted-foreground hover:text-foreground" />
                     </TooltipTrigger>
                     <TooltipContent className="max-w-xs">
                       <p><strong>What it shows:</strong> Lists sent and conversions by quarter</p>
@@ -786,7 +786,7 @@ export default function ReportingPage() {
                     <div key={index} className="flex items-start gap-3">
                       <div className="flex-1">
                         <p className="font-medium">{action.action}</p>
-                        <p className="text-sm text-gray-600">
+                        <p className="text-sm text-muted-foreground">
                           {action.deadline && `Deadline: ${action.deadline}`}
                           {action.metric && ` • Count: ${action.metric}`}
                         </p>

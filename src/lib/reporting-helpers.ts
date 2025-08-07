@@ -17,15 +17,15 @@ import { getAllCallCompletions } from './reporting/call-analytics';
 export function calculateTeamPerformance(pipelineItems: any[], activityLogs: any[], financeEntries: any[] = []) {
   // Get unique BDRs from the provided data
   const bdrSet = new Set<string>();
-  pipelineItems.forEach(item => item.bdr && bdrSet.add(item.bdr));
-  activityLogs.forEach(log => log.bdr && bdrSet.add(log.bdr));
-  financeEntries.forEach(entry => entry.bdr && bdrSet.add(entry.bdr));
+  pipelineItems.forEach(item => item.bdr?.name && bdrSet.add(item.bdr.name));
+  activityLogs.forEach(log => log.bdr?.name && bdrSet.add(log.bdr.name));
+  financeEntries.forEach(entry => entry.bdr?.name && bdrSet.add(entry.bdr.name));
   
   const allBDRs = Array.from(bdrSet);
   
   const activeBDRs = allBDRs.filter(bdr => {
     const recentActivity = activityLogs.filter(log => 
-      log.bdr === bdr && 
+      log.bdr?.name === bdr && 
       log.timestamp >= subDays(new Date(), 7)
     );
     return recentActivity.length > 0;
@@ -33,13 +33,13 @@ export function calculateTeamPerformance(pipelineItems: any[], activityLogs: any
   
   // Calculate individual BDR performance
   const bdrPerformance = allBDRs.map(bdr => {
-    const bdrItems = pipelineItems.filter(item => item.bdr === bdr);
-    const bdrActivities = activityLogs.filter(log => log.bdr === bdr);
-    const bdrFinanceEntries = financeEntries.filter(entry => entry.bdr === bdr);
+    const bdrItems = pipelineItems.filter(item => item.bdr?.name === bdr);
+    const bdrActivities = activityLogs.filter(log => log.bdr?.name === bdr);
+    const bdrFinanceEntries = financeEntries.filter(entry => entry.bdr?.name === bdr);
     
     // Use enhanced call completion logic for BDR performance
     const allCallCompletions = getAllCallCompletions(pipelineItems, activityLogs, new Date(0), new Date());
-    const bdrCallCompletions = allCallCompletions.filter(completion => completion.bdr === bdr);
+    const bdrCallCompletions = allCallCompletions.filter(completion => completion.bdr?.name === bdr);
     const calls = bdrCallCompletions.length;
     
     const agreements = bdrActivities.filter(log => log.activityType === 'Agreement_Sent').length;

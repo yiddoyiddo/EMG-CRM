@@ -253,6 +253,22 @@ export function FinanceTable({
       },
     },
     {
+      accessorKey: 'exchangeRate',
+      header: 'Exchange Rate',
+      cell: ({ row }) => {
+        const rate = row.getValue('exchangeRate') as number | null;
+        return rate ? `$1 = £${rate.toFixed(4)}` : '-';
+      },
+    },
+    {
+      accessorKey: 'exchangeRateDate',
+      header: 'Exchange Rate Date',
+      cell: ({ row }) => {
+        const date = row.getValue('exchangeRateDate') as Date | null;
+        return date ? new Date(date).toLocaleDateString() : '-';
+      },
+    },
+    {
       accessorKey: 'actualGbpReceived',
       header: 'Actual GBP Received',
       cell: ({ row }) => {
@@ -381,6 +397,8 @@ export function FinanceTable({
                         <TableHead>Due Date</TableHead>
                         <TableHead>Sold Amount</TableHead>
                         <TableHead>GBP Amount</TableHead>
+                        <TableHead>Exchange Rate</TableHead>
+                        <TableHead>Exchange Rate Date</TableHead>
                         <TableHead>Actual GBP</TableHead>
                         <TableHead>Commission</TableHead>
                         <TableHead>Notes</TableHead>
@@ -437,6 +455,12 @@ export function FinanceTable({
                                 )}
                               </div>
                             ) : '-'}
+                          </TableCell>
+                          <TableCell>
+                            {entry.exchangeRate ? `$1 = £${entry.exchangeRate.toFixed(4)}` : '-'}
+                          </TableCell>
+                          <TableCell>
+                            {entry.exchangeRateDate ? new Date(entry.exchangeRateDate).toLocaleDateString() : '-'}
                           </TableCell>
                           <TableCell>
                             {entry.actualGbpReceived ? `£${entry.actualGbpReceived.toLocaleString()}` : '-'}

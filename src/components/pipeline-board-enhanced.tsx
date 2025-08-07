@@ -82,7 +82,7 @@ export function PipelineBoardEnhanced({ items, isLoading, selectedBdr, onRefresh
       icon: '📋',
       categories: ['Pipeline'],
       statuses: ['Proposal - Media', 'Proposal - Profile', 'Agreement - Media', 'Agreement - Profile', 'Partner List Pending'],
-      color: 'bg-blue-50 border-l-blue-500'
+      color: 'bg-blue-50 dark:bg-blue-950/30 border-l-blue-500 dark:border-l-blue-400'
     },
     {
       id: 'Lists_Media_QA',
@@ -90,7 +90,7 @@ export function PipelineBoardEnhanced({ items, isLoading, selectedBdr, onRefresh
       icon: '📊',
       categories: ['Lists_Media_QA'],
       statuses: ['Partner List Sent', 'List Out', 'List Out - Not Sold', 'Media Sales', 'Q&A', 'Free Q&A Offered', 'Sold'],
-      color: 'bg-green-50 border-l-green-500'
+      color: 'bg-green-50 dark:bg-green-950/30 border-l-green-500 dark:border-l-green-400'
     },
     {
       id: 'Calls',
@@ -98,7 +98,7 @@ export function PipelineBoardEnhanced({ items, isLoading, selectedBdr, onRefresh
       icon: '📞',
       categories: ['Calls'],
       statuses: ['Call Proposed', 'Call Booked', 'Call Conducted'],
-      color: 'bg-purple-50 border-l-purple-500'
+      color: 'bg-purple-50 dark:bg-purple-950/30 border-l-purple-500 dark:border-l-purple-400'
     },
     {
       id: 'Declined_Rescheduled',
@@ -106,7 +106,7 @@ export function PipelineBoardEnhanced({ items, isLoading, selectedBdr, onRefresh
       icon: '⏸️',
       categories: ['Declined_Rescheduled'],
       statuses: ['Declined_Rescheduled', 'Rescheduled', 'Lost'],
-      color: 'bg-orange-50 border-l-orange-500'
+      color: 'bg-orange-50 dark:bg-orange-950/30 border-l-orange-500 dark:border-l-orange-400'
     }
   ];
   
@@ -314,7 +314,7 @@ export function PipelineBoardEnhanced({ items, isLoading, selectedBdr, onRefresh
                 item.status.includes('Proposal') ? 'bg-purple-100 text-purple-800' :
                 item.status.includes('Declined') ? 'bg-red-100 text-red-800' :
                 item.status.includes('Rescheduled') ? 'bg-orange-100 text-orange-800' :
-                'bg-gray-100 text-gray-800'
+                'bg-muted text-muted-foreground'
               }`}>
                 {item.status}
               </div>
@@ -671,10 +671,10 @@ export function PipelineBoardEnhanced({ items, isLoading, selectedBdr, onRefresh
                   </Button>
                   <span className="text-xl">{section.icon}</span>
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-800">
+                    <h3 className="text-lg font-semibold text-foreground">
                       {section.label}
                     </h3>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-muted-foreground">
                       {sectionItems.length} items
                     </p>
                   </div>

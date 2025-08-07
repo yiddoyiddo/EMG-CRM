@@ -36,6 +36,7 @@ export default function RootLayout({
                         width={120}
                         height={120}
                         className="object-contain invert dark:invert-0"
+                        style={{ width: 'auto', height: 'auto' }}
                       />
                       <ThemeToggle />
                     </div>

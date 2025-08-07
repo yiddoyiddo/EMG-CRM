@@ -1,9 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { createPipelineItemSchema, pipelineFilterSchema } from "@/lib/validations";
+import { Role } from "@prisma/client";
 
 export async function GET(req: NextRequest) {
   try {
+    console.log('🔍 Pipeline API called');
+    
+    // 1. Get Session securely on the server
+    const session = await getServerSession(authOptions);
+    console.log('📋 Session:', session ? `User: ${session.user?.email}, Role: ${session.user?.role}` : 'NO SESSION');
+
+    // 2. Check Authentication
+    if (!session || !session.user) {
+      console.log('❌ No session - returning 401');
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { role, id: userId, name: userName } = session.user;
+    console.log(`👤 User: ${userId}, Role: ${role}, Name: ${userName}`);
+
     const { searchParams } = new URL(req.url);
     const search = searchParams.get('search') || undefined;
     const category = searchParams.get('category') || undefined;
@@ -24,8 +42,22 @@ export async function GET(req: NextRequest) {
       pageSize,
     });
     
-    // Build the where clause
+    // 3. Enforce Authorization (RBAC) - Build where clause with role-based filtering
     const where: any = {};
+    
+    // Role-based data filtering
+    if (role === Role.BDR) {
+      // BDRs can only see their own pipeline items
+      where.bdr = userName; // Use the user's name as the BDR filter
+      console.log(`🔒 BDR filter applied: bdr = ${userName}`);
+    } else if (role === Role.ADMIN) {
+      // Admins can see all pipeline items - no additional filtering
+      console.log('🔓 ADMIN - No bdr filter applied');
+    } else {
+      // Unknown role - deny access
+      console.log(`❌ Unknown role: ${role}`);
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
     
     if (parsedParams.search) {
       where.OR = [
@@ -43,8 +75,12 @@ export async function GET(req: NextRequest) {
       where.status = parsedParams.status;
     }
     
-    if (parsedParams.bdr) {
+    // Note: For BDRs, we ignore the 'bdr' filter param since they can only see their own data
+    // For Admins, we can still apply the bdr filter if provided
+    if (parsedParams.bdr && role === Role.ADMIN) {
+      console.log(`🔍 Admin requested BDR filter: "${parsedParams.bdr}"`);
       where.bdr = parsedParams.bdr;
+      console.log(`✅ BDR filter applied: ${parsedParams.bdr}`);
     }
     
     // Add filter for top-level items only (not children of sublists)
@@ -52,9 +88,12 @@ export async function GET(req: NextRequest) {
       ...where,
       parentId: null
     };
+    
+    console.log('📋 Final WHERE clause:', JSON.stringify(whereWithParent, null, 2));
 
     // Get total count for pagination (only top-level items)
     const total = await prisma.pipelineItem.count({ where: whereWithParent });
+    console.log(`📊 Total items found: ${total}`);
     
     // Get pipeline items with optimized query using select
     const items = await prisma.pipelineItem.findMany({
@@ -66,7 +105,7 @@ export async function GET(req: NextRequest) {
         id: true,
         name: true,
         title: true,
-        bdr: true,
+        bdr: true, // This is now a string field
         company: true,
         category: true,
         status: true,
@@ -97,7 +136,7 @@ export async function GET(req: NextRequest) {
             id: true,
             name: true,
             title: true,
-            bdr: true,
+            bdr: true, // This is now a string field
             company: true,
             category: true,
             status: true,
@@ -137,7 +176,7 @@ export async function GET(req: NextRequest) {
               select: {
                 id: true,
                 timestamp: true,
-                bdr: true,
+                bdr: true, // This is now a string field
                 activityType: true,
                 description: true,
                 notes: true,
@@ -160,7 +199,7 @@ export async function GET(req: NextRequest) {
           select: {
             id: true,
             timestamp: true,
-            bdr: true,
+            bdr: true, // This is now a string field
             activityType: true,
             description: true,
             notes: true,
@@ -184,6 +223,8 @@ export async function GET(req: NextRequest) {
     // Calculate total pages
     const totalPages = Math.ceil(total / parsedParams.pageSize);
     
+    console.log(`📤 Returning ${transformedItems.length} items to frontend`);
+    
     return NextResponse.json({
       items: transformedItems,
       total,
@@ -202,36 +243,62 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    // 1. Get Session securely on the server
+    const session = await getServerSession(authOptions);
+
+    // 2. Check Authentication
+    if (!session || !session.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { role, id: userId, name: userName } = session.user;
     const data = await req.json();
     
     // Validate the request body
     const validatedData = createPipelineItemSchema.parse(data);
     
+    // 3. Enforce Authorization (RBAC) for pipeline item creation
+    let pipelineData = { ...validatedData };
+    
+    if (role === Role.BDR) {
+      // BDRs can only create pipeline items assigned to themselves
+      pipelineData.bdr = userName; // Use the user's name as the BDR
+    } else if (role === Role.ADMIN) {
+      // Admins can assign pipeline items to any BDR
+      // Use the provided bdr or assign to themselves if not provided
+      if (!pipelineData.bdr) {
+        pipelineData.bdr = userName;
+      }
+    } else {
+      // Unknown role - deny access
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    
     // Create the pipeline item
     const pipelineItem = await prisma.pipelineItem.create({
       data: {
-        name: validatedData.name,
-        title: validatedData.title,
-        bdr: validatedData.bdr,
-        company: validatedData.company,
-        category: validatedData.category,
-        status: validatedData.status,
-        value: validatedData.value,
-        probability: validatedData.probability,
-        expectedCloseDate: validatedData.expectedCloseDate,
-        callDate: validatedData.callDate,
+        name: pipelineData.name,
+        title: pipelineData.title,
+        bdr: pipelineData.bdr, // This is now a string field
+        company: pipelineData.company,
+        category: pipelineData.category,
+        status: pipelineData.status,
+        value: pipelineData.value,
+        probability: pipelineData.probability,
+        expectedCloseDate: pipelineData.expectedCloseDate,
+        callDate: pipelineData.callDate,
         lastUpdated: new Date(),
-        link: validatedData.link,
-        phone: validatedData.phone,
-        notes: validatedData.notes,
-        email: validatedData.email,
-        leadId: validatedData.leadId,
+        link: pipelineData.link,
+        phone: pipelineData.phone,
+        notes: pipelineData.notes,
+        email: pipelineData.email,
+        leadId: pipelineData.leadId,
         // Initialize sublist fields
-        parentId: validatedData.parentId || null,
-        isSublist: validatedData.isSublist || false,
-        sublistName: validatedData.sublistName || null,
-        sortOrder: validatedData.sortOrder || null,
-      },
+        parentId: pipelineData.parentId || null,
+        isSublist: pipelineData.isSublist || false,
+        sublistName: pipelineData.sublistName || null,
+        sortOrder: pipelineData.sortOrder || null,
+      }
     });
     
     return NextResponse.json(pipelineItem, { status: 201 });

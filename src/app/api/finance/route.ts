@@ -1,11 +1,24 @@
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { createFinanceEntrySchema } from "@/lib/validations";
-import { NextRequest, NextResponse } from "next/server";
 import { exchangeRateService } from "@/lib/exchange-rate";
+import { Role } from "@prisma/client";
 
 // GET - List finance entries with filters and monthly grouping
 export async function GET(req: NextRequest) {
   try {
+    // 1. Get Session securely on the server
+    const session = await getServerSession(authOptions);
+
+    // 2. Check Authentication
+    if (!session || !session.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { role, id: userId } = session.user;
+
     const { searchParams } = new URL(req.url);
     const search = searchParams.get('search') || '';
     const status = searchParams.get('status') || undefined;
@@ -17,24 +30,39 @@ export async function GET(req: NextRequest) {
     const analytics = searchParams.get('analytics') === 'true';
     const skip = (page - 1) * pageSize;
     
-    // Build where clause
+    // 3. Enforce Authorization (RBAC) - Build where clause with role-based filtering
     const where: {
       OR?: Array<{ company: { contains: string; mode: 'insensitive' } } | 
-                  { bdr: { contains: string; mode: 'insensitive' } } | 
                   { notes: { contains: string; mode: 'insensitive' } }>;
       status?: string;
-      bdr?: string;
+      bdr?: string; // Changed from { name: string } to string
+      bdrId?: string;
       month?: string;
     } = {};
+
+    // Role-based data filtering
+    if (role === Role.BDR) {
+      // BDRs can only see their own finance entries
+      where.bdrId = userId;
+    } else if (role === Role.ADMIN) {
+      // Admins can see all finance entries - no additional filtering
+    } else {
+      // Unknown role - deny access
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    
     if (search) {
       where.OR = [
         { company: { contains: search, mode: 'insensitive' } },
-        { bdr: { contains: search, mode: 'insensitive' } },
         { notes: { contains: search, mode: 'insensitive' } },
       ];
     }
     if (status) where.status = status;
-    if (bdr) where.bdr = bdr;
+    // Note: For BDRs, we ignore the 'bdr' filter param since they can only see their own data
+    // For Admins, we can still apply the bdr filter if provided
+    if (bdr && role === Role.ADMIN) {
+      where.bdr = bdr; // Changed from where.bdr = { name: bdr } to where.bdr = bdr
+    }
     if (month) where.month = month;
     
     if (analytics) {
@@ -135,11 +163,12 @@ export async function GET(req: NextRequest) {
       // BDR performance
       const bdrPerformance = Object.entries(
         allEntries.reduce((acc: {[key: string]: {revenue: number, deals: number}}, entry) => {
-          if (!acc[entry.bdr]) {
-            acc[entry.bdr] = { revenue: 0, deals: 0 };
+          const bdrName = entry.bdr || 'Unassigned';
+          if (!acc[bdrName]) {
+            acc[bdrName] = { revenue: 0, deals: 0 };
           }
-          acc[entry.bdr].revenue += entry.gbpAmount || 0;
-          acc[entry.bdr].deals += 1;
+          acc[bdrName].revenue += entry.gbpAmount || 0;
+          acc[bdrName].deals += 1;
           return acc;
         }, {})
       ).map(([bdr, data]) => ({
@@ -204,6 +233,25 @@ export async function GET(req: NextRequest) {
       where,
       skip,
       take: pageSize,
+      select: {
+        id: true,
+        company: true,
+        bdr: true, // This is now a string field
+        leadGen: true,
+        status: true,
+        invoiceDate: true,
+        dueDate: true,
+        soldAmount: true,
+        gbpAmount: true,
+        exchangeRate: true,
+        exchangeRateDate: true,
+        actualGbpReceived: true,
+        notes: true,
+        commissionPaid: true,
+        month: true,
+        createdAt: true,
+        updatedAt: true
+      },
       orderBy: [
         { month: 'desc' },
         { createdAt: 'desc' }
@@ -230,17 +278,43 @@ export async function GET(req: NextRequest) {
 // POST - Create a new finance entry
 export async function POST(req: NextRequest) {
   try {
+    // 1. Get Session securely on the server
+    const session = await getServerSession(authOptions);
+
+    // 2. Check Authentication
+    if (!session || !session.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { role, id: userId, name: userName } = session.user;
     const data = await req.json();
     
     // Validate the finance entry data
     const validatedData = createFinanceEntrySchema.parse(data);
     
+    // 3. Enforce Authorization (RBAC) for finance entry creation
+    let financeData = { ...validatedData };
+    
+    if (role === Role.BDR) {
+      // BDRs can only create finance entries assigned to themselves
+      financeData.bdr = userName; // Use the user's name as the BDR
+    } else if (role === Role.ADMIN) {
+      // Admins can assign finance entries to any BDR
+      // Use the provided bdr or assign to themselves if not provided
+      if (!financeData.bdr) {
+        financeData.bdr = userName;
+      }
+    } else {
+      // Unknown role - deny access
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    
     // Convert date strings to Date objects
     const processedData = {
-      ...validatedData,
-      invoiceDate: validatedData.invoiceDate ? new Date(validatedData.invoiceDate) : null,
-      dueDate: validatedData.dueDate ? new Date(validatedData.dueDate) : null,
-      exchangeRateDate: validatedData.exchangeRateDate ? new Date(validatedData.exchangeRateDate) : null,
+      ...financeData,
+      invoiceDate: financeData.invoiceDate ? new Date(financeData.invoiceDate) : null,
+      dueDate: financeData.dueDate ? new Date(financeData.dueDate) : null,
+      exchangeRateDate: financeData.exchangeRateDate ? new Date(financeData.exchangeRateDate) : null,
     };
     
     // Handle automatic USD to GBP conversion if needed
@@ -258,7 +332,7 @@ export async function POST(req: NextRequest) {
     
     // Create the finance entry
     const financeEntry = await prisma.financeEntry.create({
-      data: processedData,
+      data: processedData
     });
     
     return NextResponse.json(financeEntry, { status: 201 });

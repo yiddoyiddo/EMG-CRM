@@ -1,9 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { createActivityLogSchema } from "@/lib/validations";
+import { Role } from "@prisma/client";
 
 export async function GET(req: NextRequest) {
   try {
+    // 1. Get Session securely on the server
+    const session = await getServerSession(authOptions);
+
+    // 2. Check Authentication
+    if (!session || !session.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { role, id: userId } = session.user;
+
     const { searchParams } = new URL(req.url);
     const bdr = searchParams.get('bdr') || undefined;
     const activityType = searchParams.get('activityType') || undefined;
@@ -16,10 +29,25 @@ export async function GET(req: NextRequest) {
     
     const skip = (page - 1) * pageSize;
     
-    // Build the where clause
+    // 3. Enforce Authorization (RBAC) - Build where clause with role-based filtering
     const where: Record<string, unknown> = {};
+
+    // Role-based data filtering
+    if (role === Role.BDR) {
+      // BDRs can only see their own activity logs
+      where.bdrId = userId;
+    } else if (role === Role.ADMIN) {
+      // Admins can see all activity logs - no additional filtering
+    } else {
+      // Unknown role - deny access
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
     
-    if (bdr) where.bdr = bdr;
+    // Note: For BDRs, we ignore the 'bdr' filter param since they can only see their own data
+    // For Admins, we can still apply the bdr filter if provided
+    if (bdr && role === Role.ADMIN) {
+      where.bdr = { name: bdr };
+    }
     if (activityType) where.activityType = activityType;
     if (leadId) where.leadId = leadId;
     if (pipelineItemId) where.pipelineItemId = pipelineItemId;
@@ -41,6 +69,13 @@ export async function GET(req: NextRequest) {
       take: pageSize,
       orderBy: { timestamp: 'desc' },
       include: {
+        bdr: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          }
+        },
         lead: {
           select: {
             id: true,
@@ -82,33 +117,68 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    // 1. Get Session securely on the server
+    const session = await getServerSession(authOptions);
+
+    // 2. Check Authentication
+    if (!session || !session.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { role, id: userId } = session.user;
     const data = await req.json();
     
     // Validate the request body
     const validatedData = createActivityLogSchema.parse(data);
     
+    // 3. Enforce Authorization (RBAC) for activity log creation
+    let activityData = { ...validatedData };
+    
+    if (role === Role.BDR) {
+      // BDRs can only create activity logs assigned to themselves
+      activityData.bdrId = userId;
+    } else if (role === Role.ADMIN) {
+      // Admins can assign activity logs to any user
+      // Use the provided bdrId or assign to themselves if not provided
+      if (!activityData.bdrId) {
+        activityData.bdrId = userId;
+      }
+    } else {
+      // Unknown role - deny access
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    
     // Create the activity log and update the pipeline item's lastUpdated
     const [activityLog] = await prisma.$transaction([
       prisma.activityLog.create({
         data: {
-          bdr: validatedData.bdr,
-          activityType: validatedData.activityType,
-          description: validatedData.description,
-          scheduledDate: validatedData.scheduledDate,
-          completedDate: validatedData.completedDate,
-          notes: validatedData.notes,
-          leadId: validatedData.leadId,
-          pipelineItemId: validatedData.pipelineItemId,
-          previousStatus: validatedData.previousStatus,
-          newStatus: validatedData.newStatus,
-          previousCategory: validatedData.previousCategory,
-          newCategory: validatedData.newCategory,
+          bdrId: activityData.bdrId,
+          activityType: activityData.activityType,
+          description: activityData.description,
+          scheduledDate: activityData.scheduledDate,
+          completedDate: activityData.completedDate,
+          notes: activityData.notes,
+          leadId: activityData.leadId,
+          pipelineItemId: activityData.pipelineItemId,
+          previousStatus: activityData.previousStatus,
+          newStatus: activityData.newStatus,
+          previousCategory: activityData.previousCategory,
+          newCategory: activityData.newCategory,
         },
+        include: {
+          bdr: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            }
+          }
+        }
       }),
       // Update lastUpdated on the pipeline item if it exists
-      ...(validatedData.pipelineItemId ? [
+      ...(activityData.pipelineItemId ? [
         prisma.pipelineItem.update({
-          where: { id: validatedData.pipelineItemId },
+          where: { id: activityData.pipelineItemId },
           data: { lastUpdated: new Date() },
         })
       ] : [])
