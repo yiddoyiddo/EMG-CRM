@@ -95,11 +95,17 @@ export async function GET(req: NextRequest) {
       }
     });
     
+    // Normalize response: return bdr as a string (name) to match frontend expectations
+    const normalizedLogs = logs.map((log: any) => ({
+      ...log,
+      bdr: log.bdr?.name || '',
+    }));
+    
     // Calculate total pages
     const totalPages = Math.ceil(total / pageSize);
     
     return NextResponse.json({
-      logs,
+      logs: normalizedLogs,
       total,
       page,
       pageSize,

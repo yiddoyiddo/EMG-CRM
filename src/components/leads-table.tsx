@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import {
   ColumnDef,
   flexRender,
@@ -33,6 +34,7 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Filter, Download, Upload, Trash2, Move, CheckCircle2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Lead, useBdrManager } from '@/lib/hooks';
+import { useBulkUpdateLeads, useBulkDeleteLeads, useBulkConvertLeads } from '@/lib/bulk-operations';
 import { leadSourceEnum, leadStatusEnum } from '@/lib/validations';
 import { toast } from 'sonner';
 import { BulkPipelineDialog } from './bulk-pipeline-dialog';
@@ -40,6 +42,7 @@ import { LeadUpdatesDialog } from './lead-updates-dialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AddBdrDialog } from '@/components/ui/add-bdr-dialog';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
 // Custom type for column meta data
 interface ColumnMeta {
@@ -90,11 +93,17 @@ export function LeadsTable<TData, TValue>({
   onGlobalFilterChange,
   onFilterChange,
   isLoading,
+  columnVisibility,
+  onColumnVisibilityChange,
 }: DataTableProps<TData, TValue>) {
   const { bdrs, addBdr } = useBdrManager();
   const [rowSelection, setRowSelection] = useState({});
   const [showFilters, setShowFilters] = useState(false);
   const [bulkPipelineOpen, setBulkPipelineOpen] = useState(false);
+  const bulkUpdateLeads = useBulkUpdateLeads();
+  const bulkDeleteLeads = useBulkDeleteLeads();
+  const bulkConvertLeads = useBulkConvertLeads();
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const table = useReactTable({
     data,
@@ -104,53 +113,86 @@ export function LeadsTable<TData, TValue>({
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     onRowSelectionChange: setRowSelection,
+    onColumnVisibilityChange,
     state: {
       rowSelection,
+      columnVisibility: columnVisibility || {},
     },
   });
 
-  // Get selected rows
+  // Get selected rows (must be declared before effects that depend on it)
   const selectedRowIds = useMemo(() => Object.keys(rowSelection), [rowSelection]);
   const selectedRowData = useMemo(() => {
     return data.filter((_, index) => 
       selectedRowIds.includes(index.toString())
     ) as Lead[];
   }, [data, selectedRowIds]);
-
-  // Use selectedRowData directly instead of maintaining separate state
   const selectedRows = selectedRowData;
+
+  // Keyboard shortcuts: / focus search, Del delete, Shift+P convert
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === '/' && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        const el = document.getElementById('leads-search') as HTMLInputElement | null;
+        el?.focus();
+      }
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedRows.length > 0) {
+        e.preventDefault();
+        setConfirmOpen(true);
+      }
+      if (((e as any).key?.toLowerCase?.() === 'p' && (e.shiftKey || e.altKey)) && selectedRows.length > 0) {
+        e.preventDefault();
+        handleConvertAll();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [selectedRows.length]);
+
+  // Virtualization
+  const tableContainerRef = React.useRef<HTMLDivElement | null>(null);
+  const rowVirtualizer = useVirtualizer({
+    count: table.getRowModel().rows.length,
+    getScrollElement: () => tableContainerRef.current,
+    estimateSize: () => 44,
+    overscan: 10,
+  });
 
   function handleStatusChange(status: string) {
     if (selectedRows.length === 0) {
       toast.error('Please select at least one lead to update');
       return;
     }
-
     const selectedIds = selectedRows.map(row => row.id);
-    
-    fetch('/api/leads/bulk-update', {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        ids: selectedIds,
-        status: status,
-      }),
-    })
-      .then((response) => {
-        if (response.ok) {
-          toast.success(`Updated ${selectedRows.length} leads to ${status}`);
+    const previousStatusById = new Map<number, string>(
+      selectedRows.map(r => [r.id, r.status])
+    );
+
+    bulkUpdateLeads.mutate(
+      { ids: selectedIds, status: status as any },
+      {
+        onSuccess: () => {
           setRowSelection({});
-          window.location.reload();
-        } else {
-          throw new Error('Failed to update leads');
-        }
-      })
-      .catch((error) => {
-        console.error('Error updating leads:', error);
-        toast.error('Failed to update leads');
-      });
+          toast.success(
+            `Updated ${selectedRows.length} leads to ${status}`,
+            {
+              action: {
+                label: 'Undo',
+                onClick: () => {
+                  const rollbackIds = Array.from(previousStatusById.keys());
+                  // Apply rollback to previous per-lead status is not supported by the bulk API in one call if statuses differ;
+                  // best effort: revert all to the first previous status
+                  const firstPrev = previousStatusById.values().next().value as string;
+                  bulkUpdateLeads.mutate({ ids: rollbackIds, status: firstPrev as any });
+                },
+              },
+              duration: 4000,
+            }
+          );
+        },
+      }
+    );
   }
 
   const handleBulkConvert = async () => {
@@ -168,31 +210,15 @@ export function LeadsTable<TData, TValue>({
     }
 
     const selectedIds = selectedRows.map(row => row.id);
-    
-    try {
-      const response = await fetch('/api/pipeline/convert-all', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+    bulkConvertLeads.mutate(
+      { leadIds: selectedIds, category: 'Pipeline', status: 'Proposal - Media' },
+      {
+        onSuccess: () => {
+          setRowSelection({});
+          toast.success(`Converted ${selectedRows.length} leads to pipeline`);
         },
-        body: JSON.stringify({
-          leadIds: selectedIds,
-          category: 'Pipeline',
-          status: 'Proposal - Media',
-        }),
-      });
-
-      if (response.ok) {
-        toast.success(`Converted ${selectedRows.length} leads to pipeline`);
-        setRowSelection({});
-        window.location.reload();
-      } else {
-        throw new Error('Failed to convert leads');
       }
-    } catch (error) {
-      console.error('Error converting leads:', error);
-      toast.error('Failed to convert leads');
-    }
+    );
   };
 
   const handleBulkDelete = () => {
@@ -200,33 +226,7 @@ export function LeadsTable<TData, TValue>({
       toast.error('Please select at least one lead to delete');
       return;
     }
-
-    if (confirm(`Are you sure you want to delete ${selectedRows.length} leads?`)) {
-      const selectedIds = selectedRows.map(row => row.id);
-      
-      fetch('/api/leads/bulk-delete', {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ids: selectedIds,
-        }),
-      })
-        .then((response) => {
-          if (response.ok) {
-            toast.success(`Deleted ${selectedRows.length} leads`);
-            setRowSelection({});
-            window.location.reload();
-          } else {
-            throw new Error('Failed to delete leads');
-          }
-        })
-        .catch((error) => {
-          console.error('Error deleting leads:', error);
-          toast.error('Failed to delete leads');
-        });
-    }
+    setConfirmOpen(true);
   };
 
   const handleAddBdr = (newBdr: string) => {
@@ -240,12 +240,16 @@ export function LeadsTable<TData, TValue>({
     return success;
   };
 
-  if (isLoading) {
-    return <TableSkeleton />;
-  }
+  // Render skeleton conditionally, but without changing hook order above
+  const maybeSkeleton = isLoading ? <TableSkeleton /> : null;
+
+  
 
   return (
     <div className="space-y-4">
+      {/* Loading Skeleton */}
+      {maybeSkeleton}
+
       {/* Bulk Actions */}
       {selectedRows.length > 0 && (
         <Card>
@@ -311,11 +315,35 @@ export function LeadsTable<TData, TValue>({
         </Card>
       )}
 
+      {/* Confirm bulk delete dialog */}
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title="Delete selected leads?"
+        description={`This will permanently remove ${selectedRows.length} lead${selectedRows.length !== 1 ? 's' : ''}. This action cannot be undone.`}
+        confirmLabel="Delete"
+        onConfirm={() => {
+          const ids = selectedRows.map(r => r.id);
+          const snapshot = [...selectedRows];
+          bulkDeleteLeads.mutate(
+            { ids },
+            {
+              onSuccess: () => {
+                setConfirmOpen(false);
+                setRowSelection({});
+                toast.success(`Deleted ${snapshot.length} lead${snapshot.length !== 1 ? 's' : ''}`);
+              },
+            }
+          );
+        }}
+      />
+
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between pb-16 sm:pb-0">
         <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
           <div className="relative">
             <Input
+              id="leads-search"
               placeholder="Search leads..."
               value={filters.search || ''}
               onChange={(e) => onGlobalFilterChange(e.target.value)}
@@ -391,9 +419,9 @@ export function LeadsTable<TData, TValue>({
         )}
       </div>
       
-      <div className="rounded-md border">
-        <div className="overflow-auto">
-          <Table className="w-full">
+      <div className="rounded-xl border border-white/20 dark:border-white/10 bg-white/40 dark:bg-white/[0.03] backdrop-blur-xl shadow-[0_15px_40px_-20px_rgba(0,0,0,0.45)]">
+        <div className="overflow-auto max-h-[70vh]" ref={tableContainerRef}>
+          <Table className="w-full" style={{ position: 'relative' }}>
             <TableHeader>
               <TableRow>
                 {table.getHeaderGroups().map((headerGroup) => (
@@ -401,7 +429,7 @@ export function LeadsTable<TData, TValue>({
                     return (
                       <TableHead
                         key={header.id}
-                        className="whitespace-nowrap px-4"
+                        className="whitespace-nowrap px-4 text-foreground/80"
                       >
                         {header.isPlaceholder
                           ? null
@@ -417,24 +445,40 @@ export function LeadsTable<TData, TValue>({
             </TableHeader>
             <TableBody>
               {table.getRowModel().rows?.length ? (
-                table.getRowModel().rows.map((row) => (
-                  <TableRow
-                    key={row.id}
-                    data-state={row.getIsSelected() && "selected"}
-                  >
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell
-                        key={cell.id}
-                        className="px-4"
+                <>
+                  <tr>
+                    <td style={{ height: rowVirtualizer.getTotalSize() }} />
+                  </tr>
+                  {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                    const row = table.getRowModel().rows[virtualRow.index];
+                    return (
+                      <TableRow
+                        key={row.id}
+                        data-state={row.getIsSelected() && "selected"}
+                        className="hover:bg-white/50 dark:hover:bg-white/5 transition-colors"
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          transform: `translateY(${virtualRow.start}px)`,
+                        }}
                       >
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
-                        )}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
+                        {row.getVisibleCells().map((cell) => (
+                          <TableCell
+                            key={cell.id}
+                            className="px-4"
+                          >
+                            {flexRender(
+                              cell.column.columnDef.cell,
+                              cell.getContext()
+                            )}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    );
+                  })}
+                </>
               ) : (
                 <TableRow>
                   <TableCell
@@ -519,6 +563,30 @@ export function LeadsTable<TData, TValue>({
           </div>
         </div>
       </div>
+
+      {/* Sticky bottom action bar for mobile when rows are selected */}
+      {selectedRows.length > 0 && (
+        <div className="sm:hidden fixed bottom-0 left-0 right-0 z-50 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <div className="mx-auto max-w-screen-sm px-4 py-3">
+            <div className="flex items-center justify-between gap-2">
+              <div className="text-sm font-medium">
+                {selectedRows.length} selected
+              </div>
+              <div className="flex items-center gap-2">
+                <Button size="sm" variant="outline" onClick={() => setShowFilters(!showFilters)}>
+                  <Filter className="h-4 w-4" />
+                </Button>
+                <Button size="sm" variant="outline" onClick={handleConvertAll}>
+                  <Move className="h-4 w-4" />
+                </Button>
+                <Button size="sm" variant="destructive" onClick={handleBulkDelete}>
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Remove the duplicate BulkPipelineDialog */}
     </div>

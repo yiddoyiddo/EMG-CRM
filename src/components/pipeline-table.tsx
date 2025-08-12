@@ -36,14 +36,16 @@ import {
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from 'sonner';
+import { Badge } from '@/components/ui/badge';
 
 interface PipelineTableProps {
   items: PipelineItem[];
   onRefresh?: () => void;
   selectedBdr?: string;
+  simpleMode?: boolean;
 }
 
-export function PipelineTable({ items, onRefresh, selectedBdr }: PipelineTableProps) {
+export function PipelineTable({ items, onRefresh, selectedBdr, simpleMode = true }: PipelineTableProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [moveOpen, setMoveOpen] = useState<number | null>(null);
@@ -71,6 +73,29 @@ export function PipelineTable({ items, onRefresh, selectedBdr }: PipelineTablePr
     }
     setExpandedItems(newExpanded);
   };
+
+  // Track companies with recent conflicts
+  const [conflictCompanies, setConflictCompanies] = useState<Set<string>>(new Set());
+  useState(() => { return; });
+
+  // Fetch conflict flags for companies displayed
+  // Lightweight: fire once per render set; for production, memoize by items hash
+  React.useEffect(() => {
+    const companies = Array.from(new Set(items.map(i => i.company).filter(Boolean) as string[]));
+    if (companies.length === 0) { setConflictCompanies(new Set()); return; }
+    const params = new URLSearchParams();
+    companies.forEach(c => params.append('company', c));
+    params.append('days', '14');
+    fetch(`/api/duplicates/company-conflicts?${params.toString()}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (!data?.conflicts) return;
+        const flagged = new Set<string>();
+        Object.entries<boolean>(data.conflicts).forEach(([company, has]) => { if (has) flagged.add(company); });
+        setConflictCompanies(flagged);
+      })
+      .catch(() => {});
+  }, [items]);
 
   // Recursive function to render items and their children
   const renderItemsRecursively = (itemList: PipelineItem[], level: number = 0): React.ReactElement[] => {
@@ -127,6 +152,9 @@ export function PipelineTable({ items, onRefresh, selectedBdr }: PipelineTablePr
                             field="name"
                             placeholder="Name"
                           />
+                          {conflictCompanies.has(item.company || '') && (
+                            <Badge variant="destructive" className="ml-2">Conflict</Badge>
+                          )}
                           {hasChildren && (
                             <div className="flex items-center gap-1 ml-2">
                               <div className="w-1 h-1 rounded-full bg-primary"></div>
@@ -137,6 +165,7 @@ export function PipelineTable({ items, onRefresh, selectedBdr }: PipelineTablePr
                           )}
             </div>
                         </TableCell>
+                        {!simpleMode && (
                         <TableCell className="py-2">
                           <PipelineEditableCell
                             value={item.company}
@@ -145,6 +174,8 @@ export function PipelineTable({ items, onRefresh, selectedBdr }: PipelineTablePr
                             placeholder="Company"
                           />
                         </TableCell>
+                        )}
+                        {!simpleMode && (
                         <TableCell className="py-2">
                           <PipelineEditableCell
                             value={item.title}
@@ -153,6 +184,7 @@ export function PipelineTable({ items, onRefresh, selectedBdr }: PipelineTablePr
                             placeholder="Title"
                           />
                         </TableCell>
+                        )}
                         <TableCell className="py-2">
                           <PipelineEditableCell
                             value={item.callDate || ''}
@@ -162,6 +194,7 @@ export function PipelineTable({ items, onRefresh, selectedBdr }: PipelineTablePr
                             isDate={true}
                           />
                         </TableCell>
+                        {!simpleMode && (
                         <TableCell className="py-2" onClick={(e) => e.stopPropagation()}>
                           <Popover open={showActivityLog === item.id} onOpenChange={(open) => !open && setShowActivityLog(null)}>
                             <PopoverTrigger asChild>
@@ -237,7 +270,9 @@ export function PipelineTable({ items, onRefresh, selectedBdr }: PipelineTablePr
                             </PopoverContent>
                           </Popover>
                         </TableCell>
+                        )}
 
+                        {!simpleMode && (
                         <TableCell className="py-2">
                           {item.email && (
                             <a 
@@ -249,6 +284,8 @@ export function PipelineTable({ items, onRefresh, selectedBdr }: PipelineTablePr
                             </a>
                           )}
                         </TableCell>
+                        )}
+                        {!simpleMode && (
                         <TableCell className="py-2">
                           {item.phone && (
                             <a 
@@ -260,6 +297,7 @@ export function PipelineTable({ items, onRefresh, selectedBdr }: PipelineTablePr
                             </a>
                           )}
                         </TableCell>
+                        )}
                         <TableCell className="py-2">
                           <PipelineEditableCell
                             value={item.notes}
@@ -509,17 +547,17 @@ export function PipelineTable({ items, onRefresh, selectedBdr }: PipelineTablePr
     <div className="space-y-8">
       {/* Search Bar and Add New Lead */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 rounded-xl border border-white/30 dark:border-white/10 bg-white/60 dark:bg-white/[0.05] backdrop-blur p-2">
           <Input
             placeholder="Search pipeline..."
-            className="max-w-xs"
+            className="max-w-xs h-9"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
           <Button 
             variant="outline" 
             size="icon" 
-            className="h-10 w-10"
+            className="h-9 w-9"
             onClick={() => setShowFilters(!showFilters)}
           >
             <Filter className="h-4 w-4" />
@@ -560,19 +598,19 @@ export function PipelineTable({ items, onRefresh, selectedBdr }: PipelineTablePr
               </CardHeader>
             </Card>
 
-            <div className="rounded-md border">
+            <div className="rounded-xl border border-white/20 dark:border-white/10 bg-white/40 dark:bg-white/[0.03] backdrop-blur">
               <Table>
                 <TableHeader>
-                  <TableRow className="h-10">
+                  <TableRow className="h-10 bg-white/60 dark:bg-white/[0.06]">
                     <TableHead className="w-[200px]">Name</TableHead>
-                    <TableHead className="w-[150px]">Company</TableHead>
-                    <TableHead className="w-[150px]">Title</TableHead>
+                    {!simpleMode && <TableHead className="w-[150px]">Company</TableHead>}
+                    {!simpleMode && <TableHead className="w-[150px]">Title</TableHead>}
                     <TableHead className="w-[100px]">Call Date</TableHead>
-                    <TableHead className="w-[150px]">Last Update</TableHead>
-                    <TableHead className="w-[120px]">Email</TableHead>
-                    <TableHead className="w-[120px]">Number</TableHead>
+                    {!simpleMode && <TableHead className="w-[150px]">Last Update</TableHead>}
+                    {!simpleMode && <TableHead className="w-[120px]">Email</TableHead>}
+                    {!simpleMode && <TableHead className="w-[120px]">Number</TableHead>}
                     <TableHead className="w-[200px]">Notes</TableHead>
-                    <TableHead className="w-[180px]">Actions</TableHead>
+                    <TableHead className="w-[160px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

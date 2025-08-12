@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { FileText, MessageSquare, Move, ChevronDown, ChevronRight, Trash2, Plus, Clock, ExternalLink } from 'lucide-react';
+import { FileText, MessageSquare, Move, ChevronDown, ChevronRight, Trash2, Plus, Clock, ExternalLink, BookOpen } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -44,6 +44,7 @@ interface PipelineBoardEnhancedProps {
   isLoading?: boolean;
   selectedBdr: string;
   onRefresh?: () => void;
+  simpleMode?: boolean;
 }
 
 interface GroupedSection {
@@ -55,7 +56,7 @@ interface GroupedSection {
   statuses: string[];
 }
 
-export function PipelineBoardEnhanced({ items, isLoading, selectedBdr, onRefresh }: PipelineBoardEnhancedProps) {
+export function PipelineBoardEnhanced({ items, isLoading, selectedBdr, onRefresh, simpleMode = true }: PipelineBoardEnhancedProps) {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['Pipeline', 'Lists_Media_QA', 'Calls', 'Declined_Rescheduled']));
   const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set());
   const [detailOpen, setDetailOpen] = useState<number | null>(null);
@@ -67,6 +68,7 @@ export function PipelineBoardEnhanced({ items, isLoading, selectedBdr, onRefresh
   const router = useRouter();
   const { mutate: movePipelineItem } = useMovePipelineItem();
   const { mutate: deletePipelineItem } = useDeletePipelineItem();
+  const { mutate: createActivityLog } = useCreateActivityLog();
 
   // Fetch activity logs for the selected item
   const { data: activityLogsData } = useActivityLogs({
@@ -184,6 +186,76 @@ export function PipelineBoardEnhanced({ items, isLoading, selectedBdr, onRefresh
     });
   };
 
+  function getNextStep(item: PipelineItem): { category: string; status: string; label: string } | null {
+    const { category, status } = item;
+    if (category === 'Calls') {
+      if (status === 'Call Proposed') return { category, status: 'Call Booked', label: 'Book call' };
+      if (status === 'Call Booked') return { category, status: 'Call Conducted', label: 'Conducted' };
+    }
+    if (category === 'Pipeline') {
+      if (status === 'Proposal - Profile') return { category, status: 'Agreement - Profile', label: 'Send agreement (Profile)' };
+      if (status === 'Proposal - Media') return { category, status: 'Agreement - Media', label: 'Send agreement (Media)' };
+      if (status === 'Partner List Pending') return { category: 'Lists_Media_QA', status: 'Partner List Sent', label: 'Send partner list' };
+    }
+    if (category === 'Lists_Media_QA') {
+      if (status === 'Partner List Sent') return { category, status: 'List Out', label: 'Mark list out' };
+      if (status === 'List Out') return { category, status: 'Media Sales', label: 'Move to media sales' };
+      if (status === 'Media Sales') return { category, status: 'Sold', label: 'Mark sold' };
+    }
+    return null;
+  }
+
+  function handleQuickMove(item: PipelineItem) {
+    const next = getNextStep(item);
+    if (!next) return;
+    movePipelineItem({ id: item.id, newCategory: next.category, newStatus: next.status }, {
+      onSuccess: () => {
+        toast.success(`Moved to ${next.status}`);
+        onRefresh?.();
+      },
+      onError: () => toast.error('Failed to move item'),
+    });
+  }
+
+  function handleQuickLogCall(item: PipelineItem) {
+    createActivityLog({
+      bdr: item.bdr,
+      activityType: 'Call_Completed',
+      description: 'Call completed',
+      pipelineItemId: item.id,
+    }, {
+      onSuccess: () => {
+        toast.success('Logged call');
+        onRefresh?.();
+      },
+      onError: () => toast.error('Failed to log call'),
+    });
+  }
+
+  async function handlePushToEditorial(item: PipelineItem) {
+    try {
+      const response = await fetch('/api/editorial/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pipelineItemId: item.id }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        toast.success(`"${item.name}" pushed to editorial board`);
+        onRefresh?.();
+      } else if (response.status === 409) {
+        toast.warning(`"${item.name}" is already in editorial board`);
+      } else {
+        throw new Error(result.error || 'Failed to push to editorial board');
+      }
+    } catch (error) {
+      console.error('Error pushing to editorial board:', error);
+      toast.error('Failed to push to editorial board');
+    }
+  }
+
   const handleCategoryChange = (category: string) => {
     setSelectedMoveCategory(category);
     const statuses = pipelineStatusEnum[category as keyof typeof pipelineStatusEnum];
@@ -296,6 +368,7 @@ export function PipelineBoardEnhanced({ items, isLoading, selectedBdr, onRefresh
               placeholder="Company"
             />
           </TableCell>
+          {!simpleMode && (
           <TableCell className="py-2">
             <PipelineEditableCell
               value={item.title}
@@ -304,6 +377,7 @@ export function PipelineBoardEnhanced({ items, isLoading, selectedBdr, onRefresh
               placeholder="Title"
             />
           </TableCell>
+          )}
           <TableCell className="py-2">
             <div className="flex items-center gap-2">
               <div className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -318,6 +392,14 @@ export function PipelineBoardEnhanced({ items, isLoading, selectedBdr, onRefresh
               }`}>
                 {item.status}
               </div>
+              {simpleMode && getNextStep(item) && (
+                <div className="inline-flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">Next:</span>
+                  <span className="text-xs font-medium">
+                    {getNextStep(item)!.status}
+                  </span>
+                </div>
+              )}
             </div>
           </TableCell>
           <TableCell className="py-2">
@@ -329,6 +411,7 @@ export function PipelineBoardEnhanced({ items, isLoading, selectedBdr, onRefresh
               isDate={true}
             />
           </TableCell>
+          {!simpleMode && (
           <TableCell className="py-2" onClick={(e) => e.stopPropagation()}>
             <Popover open={showActivityLog === item.id} onOpenChange={(open) => !open && setShowActivityLog(null)}>
               <PopoverTrigger asChild>
@@ -404,6 +487,8 @@ export function PipelineBoardEnhanced({ items, isLoading, selectedBdr, onRefresh
               </PopoverContent>
             </Popover>
           </TableCell>
+          )}
+          {!simpleMode && (
           <TableCell className="py-2">
             {item.email && (
               <a 
@@ -415,6 +500,8 @@ export function PipelineBoardEnhanced({ items, isLoading, selectedBdr, onRefresh
               </a>
             )}
           </TableCell>
+          )}
+          {!simpleMode && (
           <TableCell className="py-2">
             {item.phone && (
               <a 
@@ -426,6 +513,7 @@ export function PipelineBoardEnhanced({ items, isLoading, selectedBdr, onRefresh
               </a>
             )}
           </TableCell>
+          )}
           <TableCell className="py-2">
             <PipelineEditableCell
               value={item.notes}
@@ -451,6 +539,7 @@ export function PipelineBoardEnhanced({ items, isLoading, selectedBdr, onRefresh
                 }
               />
               
+              {!simpleMode && (
               <Popover open={moveOpen === item.id} onOpenChange={(open) => !open && setMoveOpen(null)}>
                 <PopoverTrigger asChild>
                   <Button 
@@ -533,9 +622,10 @@ export function PipelineBoardEnhanced({ items, isLoading, selectedBdr, onRefresh
                   </div>
                 </PopoverContent>
               </Popover>
+              )}
               
-              {item.notes && <NotesPopover notes={item.notes} />}
-              {item.link && (
+              {!simpleMode && item.notes && <NotesPopover notes={item.notes} />}
+              {!simpleMode && item.link && (
                 <a 
                   href={item.link} 
                   target="_blank" 
@@ -545,14 +635,36 @@ export function PipelineBoardEnhanced({ items, isLoading, selectedBdr, onRefresh
                   <ExternalLink className="h-3 w-3" />
                 </a>
               )}
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-6 px-2 text-destructive hover:text-destructive hover:bg-destructive/10"
-                onClick={(e) => handleDeleteItem(e, item)}
+              {simpleMode && getNextStep(item) && (
+                <Button size="sm" className="h-6 px-2 text-xs" onClick={() => handleQuickMove(item)}>
+                  Move: {getNextStep(item)!.status}
+                </Button>
+              )}
+              {simpleMode && (
+                <Button variant="outline" size="sm" className="h-6 px-2 text-xs" onClick={() => handleQuickLogCall(item)}>
+                  Log Call
+                </Button>
+              )}
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="h-6 px-2 text-xs bg-purple-50 hover:bg-purple-100 text-purple-700 border-purple-200" 
+                onClick={() => handlePushToEditorial(item)}
+                title="Push to Editorial Board"
               >
-                <Trash2 className="h-3 w-3" />
+                <BookOpen className="h-3 w-3 mr-1" />
+                Editorial
               </Button>
+              {!simpleMode && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-6 px-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                  onClick={(e) => handleDeleteItem(e, item)}
+                >
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              )}
             </div>
           </TableCell>
         </TableRow>
@@ -584,12 +696,12 @@ export function PipelineBoardEnhanced({ items, isLoading, selectedBdr, onRefresh
               </div>
             </TableCell>
             <TableCell className="py-1"></TableCell>
+            {!simpleMode && <TableCell className="py-1"></TableCell>}
             <TableCell className="py-1"></TableCell>
             <TableCell className="py-1"></TableCell>
-            <TableCell className="py-1"></TableCell>
-            <TableCell className="py-1"></TableCell>
-            <TableCell className="py-1"></TableCell>
-            <TableCell className="py-1"></TableCell>
+            {!simpleMode && <TableCell className="py-1"></TableCell>}
+            {!simpleMode && <TableCell className="py-1"></TableCell>}
+            {!simpleMode && <TableCell className="py-1"></TableCell>}
             <TableCell className="py-1"></TableCell>
             <TableCell className="py-1"></TableCell>
           </TableRow>
@@ -607,12 +719,12 @@ export function PipelineBoardEnhanced({ items, isLoading, selectedBdr, onRefresh
         <TableRow key={i}>
           <TableCell><Skeleton className="h-4 w-32" /></TableCell>
           <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-          <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+          {!simpleMode && <TableCell><Skeleton className="h-4 w-20" /></TableCell>}
           <TableCell><Skeleton className="h-4 w-20" /></TableCell>
           <TableCell><Skeleton className="h-4 w-16" /></TableCell>
-          <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-          <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-          <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+          {!simpleMode && <TableCell><Skeleton className="h-4 w-32" /></TableCell>}
+          {!simpleMode && <TableCell><Skeleton className="h-4 w-24" /></TableCell>}
+          {!simpleMode && <TableCell><Skeleton className="h-4 w-20" /></TableCell>}
           <TableCell><Skeleton className="h-4 w-32" /></TableCell>
           <TableCell><Skeleton className="h-4 w-24" /></TableCell>
         </TableRow>
@@ -622,7 +734,7 @@ export function PipelineBoardEnhanced({ items, isLoading, selectedBdr, onRefresh
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="sticky top-4 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b pb-4">
+      <div className="sticky top-4 z-10 border-b pb-4 bg-white/40 dark:bg-white/[0.03] backdrop-blur-xl supports-[backdrop-filter]:bg-white/30">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold">Enhanced Pipeline Board</h1>
@@ -639,7 +751,7 @@ export function PipelineBoardEnhanced({ items, isLoading, selectedBdr, onRefresh
             defaultStatus="Proposal - Profile"
             defaultBdr={selectedBdr}
             onSuccess={onRefresh}
-            className="shadow-lg"
+            className="shadow-[0_15px_40px_-20px_rgba(0,0,0,0.35)]"
           />
         </div>
       </div>
@@ -696,20 +808,20 @@ export function PipelineBoardEnhanced({ items, isLoading, selectedBdr, onRefresh
 
             {/* Section Table */}
             {isExpanded && (
-              <div className="rounded-b-lg border border-t-0 overflow-hidden">
+              <div className="rounded-b-xl border border-t-0 overflow-hidden bg-white/40 dark:bg-white/[0.03] backdrop-blur">
                 <Table>
                   <TableHeader>
-                    <TableRow className="h-10 bg-muted/30">
+                    <TableRow className="h-10 bg-white/60 dark:bg-white/[0.06]">
                       <TableHead className="w-[200px]">Name</TableHead>
                       <TableHead className="w-[150px]">Company</TableHead>
-                      <TableHead className="w-[150px]">Title</TableHead>
+                      {!simpleMode && <TableHead className="w-[150px]">Title</TableHead>}
                       <TableHead className="w-[120px]">Status</TableHead>
                       <TableHead className="w-[100px]">Call Date</TableHead>
-                      <TableHead className="w-[150px]">Last Update</TableHead>
-                      <TableHead className="w-[120px]">Email</TableHead>
-                      <TableHead className="w-[120px]">Number</TableHead>
+                      {!simpleMode && <TableHead className="w-[150px]">Last Update</TableHead>}
+                      {!simpleMode && <TableHead className="w-[120px]">Email</TableHead>}
+                      {!simpleMode && <TableHead className="w-[120px]">Number</TableHead>}
                       <TableHead className="w-[200px]">Notes</TableHead>
-                      <TableHead className="w-[180px]">Actions</TableHead>
+                      <TableHead className="w-[160px]">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -719,7 +831,7 @@ export function PipelineBoardEnhanced({ items, isLoading, selectedBdr, onRefresh
                       renderItemsRecursively(sectionItems)
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={simpleMode ? 6 : 10} className="text-center py-8 text-muted-foreground">
                           <div className="flex flex-col items-center gap-2">
                             <span>No items in this section</span>
                             <PipelineDialog

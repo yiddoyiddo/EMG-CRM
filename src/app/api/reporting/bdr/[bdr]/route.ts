@@ -9,8 +9,14 @@ export async function GET(request: Request, { params }: { params: { bdr: string 
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
 
+    // Map BDR route param (name) to userId for relational field filtering
+    const user = await prisma.user.findFirst({ where: { name: bdr }, select: { id: true } });
+    if (!user) {
+      return NextResponse.json([], { status: 200 });
+    }
+
     const where: any = {
-      bdr,
+      bdrId: user.id,
     };
 
     if (startDate && endDate) {

@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
 import { Button } from '@/components/ui/button';
 import { Navbar } from '@/components/ui/navbar';
@@ -11,9 +11,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Users, RefreshCcw, LayoutGrid, Table2 } from 'lucide-react';
+import { Users, RefreshCcw, LayoutGrid, Table2, HelpCircle, Sparkles } from 'lucide-react';
 import { PipelineBoardEnhanced } from '@/components/pipeline-board-enhanced';
 import { PipelineTable } from '@/components/pipeline-table';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { usePipelineItems, useBdrManager } from '@/lib/hooks';
 import { AddBdrDialog } from '@/components/ui/add-bdr-dialog';
 import { useQueryClient } from '@tanstack/react-query';
@@ -48,7 +49,12 @@ function PipelineContent() {
 
   // Handle refresh of data
   const handleRefresh = () => {
-    queryClient.invalidateQueries({ queryKey: ['pipeline'] });
+    // Invalidate all pipeline queries regardless of filters
+    queryClient.invalidateQueries({ 
+      predicate: (query) => {
+        return Array.isArray(query.queryKey) && query.queryKey[0] === 'pipeline';
+      }
+    });
   };
 
   const handleAddBdr = (newBdr: string) => {
@@ -59,6 +65,26 @@ function PipelineContent() {
     }
     return success;
   };
+
+  // Simple Mode for non-technical BDRs - start with default to avoid hydration mismatch
+  const [simpleMode, setSimpleMode] = useState<boolean>(true);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    // Load from localStorage only after component mounts
+    setIsMounted(true);
+    const stored = window.localStorage.getItem('pipeline.simpleMode');
+    if (stored) {
+      setSimpleMode(stored === 'true');
+    }
+  }, []);
+
+  useEffect(() => {
+    // Save to localStorage when simpleMode changes (but only after initial mount)
+    if (isMounted) {
+      window.localStorage.setItem('pipeline.simpleMode', simpleMode ? 'true' : 'false');
+    }
+  }, [simpleMode, isMounted]);
 
   return (
     <>
@@ -71,7 +97,7 @@ function PipelineContent() {
           </div>
           <div className="flex items-center gap-2">
             {/* View Toggle */}
-            <div className="flex items-center border rounded-md">
+            <div className="flex items-center rounded-lg border border-white/30 dark:border-white/10 bg-white/60 dark:bg-white/[0.05] backdrop-blur">
               <Button
                 variant={viewType === 'board' ? 'default' : 'ghost'}
                 size="sm"
@@ -91,6 +117,18 @@ function PipelineContent() {
                 Table
               </Button>
             </div>
+
+            {/* Simple Mode Toggle */}
+            <Button
+              variant={simpleMode ? 'secondary' : 'outline'}
+              size="sm"
+              onClick={() => setSimpleMode(v => !v)}
+              className="h-9"
+              title="Toggle a simplified, guided interface"
+            >
+              <Sparkles className="h-4 w-4 mr-1" />
+              {simpleMode ? 'Simple Mode' : 'Advanced Mode'}
+            </Button>
             
             <div className="flex items-center">
               <Users className="mr-2 h-4 w-4 text-muted-foreground" />
@@ -117,6 +155,26 @@ function PipelineContent() {
             <Button variant="outline" size="icon" onClick={handleRefresh} className="ml-2">
               <RefreshCcw className="h-4 w-4" />
             </Button>
+
+            {/* Help */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="icon" className="ml-1" title="Quick help">
+                  <HelpCircle className="h-4 w-4" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent side="bottom" align="end" className="w-80">
+                <div className="space-y-2 text-sm">
+                  <p className="font-medium">How to use the Pipeline</p>
+                  <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
+                    <li>Select your name in BDR.</li>
+                    <li>Click Add Lead to create a new prospect.</li>
+                    <li>Use Status to move items forward (Board or Table).</li>
+                    <li>Click Updates to jot quick notes after each call.</li>
+                  </ol>
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
         </div>
 
@@ -125,6 +183,7 @@ function PipelineContent() {
             items={pipelineItems}
             isLoading={isLoading}
             selectedBdr={selectedBdr}
+            simpleMode={simpleMode}
             onRefresh={handleRefresh}
           />
         ) : (
@@ -132,6 +191,7 @@ function PipelineContent() {
             items={pipelineItems} 
             onRefresh={handleRefresh}
             selectedBdr={selectedBdr}
+            simpleMode={simpleMode}
           />
         )}
       </div>

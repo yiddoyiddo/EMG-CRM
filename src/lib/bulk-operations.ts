@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 // Generic bulk operation hook
 export function useBulkOperation<TData = any>(
   endpoint: string,
-  method: 'PUT' | 'POST' | 'DELETE' = 'PUT',
+  method: 'PUT' | 'POST' | 'DELETE' | 'PATCH' = 'PUT',
   invalidateKeys: string[] = []
 ) {
   const queryClient = useQueryClient();
@@ -42,7 +42,7 @@ export function useBulkOperation<TData = any>(
 
 // Specific hooks for leads
 export function useBulkUpdateLeads() {
-  return useBulkOperation('/api/leads/bulk-update', 'PUT', ['leads']);
+  return useBulkOperation('/api/leads/bulk-update', 'PATCH', ['leads']);
 }
 
 export function useBulkDeleteLeads() {

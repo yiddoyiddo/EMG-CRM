@@ -8,7 +8,9 @@ import { formatDateUK } from '@/lib/date-utils';
 import { toast } from 'sonner';
 import { LeadToPipelineDialog } from '@/components/lead-to-pipeline-dialog';
 import { LeadUpdatesDialog } from '@/components/lead-updates-dialog';
-import { use } from 'react';
+import { use, useState } from 'react';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { LeadActivityTimeline } from '@/components/lead-activity-timeline';
 
 export default function LeadDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
@@ -18,15 +20,8 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
   const { data: lead, isLoading, isError } = useLead(leadId);
   const { mutate: deleteLead, isPending } = useDeleteLead();
   
-  const handleDelete = () => {
-    if (confirm('Are you sure you want to delete this lead?')) {
-      deleteLead(leadId, {
-        onSuccess: () => {
-          router.push('/leads');
-        }
-      });
-    }
-  };
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const handleDelete = () => setConfirmOpen(true);
   
   if (isLoading) {
     return (
@@ -54,6 +49,20 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
   
   return (
     <div className="container py-10">
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title="Delete this lead?"
+        description="This will permanently remove the lead. This action cannot be undone."
+        confirmLabel="Delete"
+        onConfirm={() => {
+          deleteLead(leadId, {
+            onSuccess: () => {
+              router.push('/leads');
+            }
+          });
+        }}
+      />
       <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
@@ -126,6 +135,7 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
               </div>
             )}
           </div>
+          <LeadActivityTimeline leadId={leadId} />
         </CardContent>
         <CardFooter className="flex justify-between">
           <div className="flex gap-2">

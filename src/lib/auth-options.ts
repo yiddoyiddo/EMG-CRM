@@ -2,6 +2,7 @@ import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { prisma } from './db';
 import bcrypt from 'bcryptjs';
+import { Role } from '@prisma/client';
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -17,10 +18,14 @@ export const authOptions: NextAuthOptions = {
         }
 
         try {
-          // Find user by email
+          // Find user by email with territory info
           const user = await prisma.user.findUnique({
             where: {
               email: credentials.username
+            },
+            include: {
+              territory: true,
+              managedTerritories: true
             }
           });
 
@@ -35,11 +40,20 @@ export const authOptions: NextAuthOptions = {
             return null;
           }
 
+          // Update last login timestamp
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { lastLoginAt: new Date() }
+          });
+
           return {
             id: user.id,
             name: user.name,
             email: user.email,
             role: user.role,
+            territoryId: user.territoryId,
+            territoryName: user.territory?.name,
+            managedTerritoryIds: user.managedTerritories.map(t => t.id),
           };
         } catch (error) {
           console.error('Auth error:', error);
@@ -58,15 +72,23 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.id = user.id;
-        token.role = user.role;
+        const userData = user as any;
+        token.id = userData.id;
+        token.role = userData.role;
+        token.name = userData.name;
+        token.territoryId = userData.territoryId;
+        token.territoryName = userData.territoryName;
+        token.managedTerritoryIds = userData.managedTerritoryIds;
       }
       return token;
     },
     async session({ session, token }) {
-      if (token) {
-        session.user.id = token.id as string;
-        session.user.role = token.role as string;
+      if (token && session.user) {
+        (session.user as any).id = token.id as string;
+        (session.user as any).role = token.role as Role;
+        (session.user as any).territoryId = token.territoryId as string | null;
+        (session.user as any).territoryName = token.territoryName as string | null;
+        (session.user as any).managedTerritoryIds = token.managedTerritoryIds as string[];
       }
       return session;
     },

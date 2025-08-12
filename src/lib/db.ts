@@ -12,17 +12,6 @@ export const prisma = globalForPrisma.prisma ?? new PrismaClient({
       url: process.env.DATABASE_URL,
     },
   },
-  // Connection pooling configuration for PostgreSQL
-  // These settings are optimized for Neon PostgreSQL
-  __internal: {
-    engine: {
-      // Connection pool settings
-      connectionLimit: 10, // Maximum connections in pool
-      poolTimeout: 20, // Seconds to wait for connection
-      acquireTimeout: 60, // Seconds to acquire connection
-      timeout: 60, // Query timeout in seconds
-    },
-  },
 });
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;

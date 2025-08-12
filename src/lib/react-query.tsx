@@ -41,7 +41,9 @@ export function ReactQueryProvider({ children }: { children: React.ReactNode }) 
     <ErrorBoundary FallbackComponent={ErrorFallback}>
       <QueryClientProvider client={queryClient}>
         {children}
-        <ReactQueryDevtools initialIsOpen={false} />
+        {process.env.NODE_ENV !== 'production' ? (
+          <ReactQueryDevtools initialIsOpen={false} />
+        ) : null}
       </QueryClientProvider>
     </ErrorBoundary>
   );

@@ -101,15 +101,33 @@ export function useLeadColumns(): ColumnDef<Lead, unknown>[] {
       meta: { priority: 'high' } as ColumnMeta,
     },
 
-    // Company column - medium priority
+    // Company column - medium priority, with conflict badge
     {
       accessorKey: "company",
       header: "Company",
-      cell: ({ row }) => (
-        <div>
-          <EditableCell value={row.getValue("company")} row={row} column={{ id: "company" }} />
-        </div>
-      ),
+      cell: ({ row }) => {
+        const company: string | null = row.getValue("company") as any;
+        const [hasConflict, setHasConflict] = (require('react') as typeof import('react')).useState<boolean>(false);
+        const ReactLib = require('react') as typeof import('react');
+        ReactLib.useEffect(() => {
+          if (!company) { setHasConflict(false); return; }
+          const params = new URLSearchParams();
+          params.append('company', company);
+          params.append('days', '14');
+          fetch(`/api/duplicates/company-conflicts?${params.toString()}`)
+            .then(r => r.ok ? r.json() : null)
+            .then(data => setHasConflict(Boolean(data?.conflicts?.[company!])))
+            .catch(() => setHasConflict(false));
+        }, [company]);
+        return (
+          <div className="flex items-center gap-2">
+            <EditableCell value={company} row={row} column={{ id: "company" }} />
+            {hasConflict && (
+              <span className="inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] bg-red-50 text-red-700 border-red-200">Conflict</span>
+            )}
+          </div>
+        );
+      },
       meta: { priority: 'medium' } as ColumnMeta,
     },
 

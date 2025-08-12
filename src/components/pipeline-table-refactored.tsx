@@ -261,6 +261,8 @@ export function PipelineTableRefactored({ items, onRefresh, selectedBdr }: Pipel
         emptyStateMessage="No pipeline items found"
         onRowClick={handleRowClick}
         getRowId={(row) => row.id.toString()}
+        virtualizeRows
+        virtualRowEstimatedHeight={44}
       />
       
       <div className="text-sm text-muted-foreground">

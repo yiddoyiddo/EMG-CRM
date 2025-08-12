@@ -22,6 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { PipelineItem, useBdrManager } from '@/lib/hooks';
 import { 
   pipelineSchema, 
@@ -31,6 +32,7 @@ import {
 import { useRouter } from 'next/navigation';
 import { AddBdrDialog } from '@/components/ui/add-bdr-dialog';
 import { Separator } from '@/components/ui/separator';
+import { toast } from 'sonner';
 
 interface PipelineFormProps {
   initialData?: PipelineItem;
@@ -56,6 +58,14 @@ export function PipelineForm({
   const [selectedCategory, setSelectedCategory] = useState<string | null>(
     initialData?.category || defaultCategory || null
   );
+  const [duplicateInfo, setDuplicateInfo] = useState<{
+    error: string;
+    details: string;
+    duplicateId: number;
+    duplicateBdr: string;
+    formValues: FormValues;
+  } | null>(null);
+  const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(pipelineSchema),
@@ -79,52 +89,74 @@ export function PipelineForm({
     setSelectedCategory(watchedCategory);
   }, [watchedCategory]);
 
-  const onSubmit = (values: FormValues) => {
+  const onSubmit = async (values: FormValues) => {
     const submitData = {
       ...values,
       value: Number(values.value),
     };
+    
 
     if (initialData) {
       // Update existing pipeline item
-      fetch(`/api/pipeline/${initialData.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(submitData),
-      })
-        .then((response) => {
-          if (response.ok) {
-            onSuccess?.();
-            router.push('/pipeline');
-          } else {
-            throw new Error('Failed to update pipeline item');
-          }
-        })
-        .catch((error) => {
-          console.error('Error updating pipeline item:', error);
+      try {
+        const response = await fetch(`/api/pipeline/${initialData.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(submitData),
         });
+        
+        if (response.ok) {
+          toast.success('Pipeline item updated successfully');
+          onSuccess?.();
+          router.push('/pipeline');
+        } else {
+          const error = await response.json();
+          toast.error(error.error || 'Failed to update pipeline item');
+        }
+      } catch (error) {
+        console.error('Error updating pipeline item:', error);
+        toast.error('Failed to update pipeline item');
+      }
     } else {
       // Create new pipeline item
-      fetch('/api/pipeline', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(submitData),
-      })
-        .then((response) => {
-          if (response.ok) {
-            onSuccess?.();
-            router.push('/pipeline');
-          } else {
-            throw new Error('Failed to create pipeline item');
-          }
-        })
-        .catch((error) => {
-          console.error('Error creating pipeline item:', error);
+      try {
+        const response = await fetch('/api/pipeline', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(submitData),
         });
+        
+        if (response.ok) {
+          toast.success('Pipeline item created successfully');
+          onSuccess?.();
+          router.push('/pipeline');
+        } else if (response.status === 409) {
+          // Handle duplicate detection
+          const duplicateError = await response.json();
+          if (duplicateError.type === 'DUPLICATE_LEAD') {
+            setDuplicateInfo({
+              error: duplicateError.error,
+              details: duplicateError.details,
+              duplicateId: duplicateError.duplicateId,
+              duplicateBdr: duplicateError.duplicateBdr,
+              formValues: values
+            });
+            setShowDuplicateDialog(true);
+          } else {
+            toast.error(duplicateError.error || 'Failed to create pipeline item');
+          }
+        } else {
+          const error = await response.json();
+          toast.error(error.error || 'Failed to create pipeline item');
+        }
+      } catch (error) {
+        console.error('Error creating pipeline item:', error);
+        toast.error('Failed to create pipeline item');
+      }
     }
   };
 
@@ -135,6 +167,37 @@ export function PipelineForm({
       form.setValue('bdr', newBdr);
     }
     return success;
+  };
+
+  const handleForceCreate = async () => {
+    if (!duplicateInfo) return;
+    
+    try {
+      const response = await fetch('/api/pipeline?force=true', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...duplicateInfo.formValues,
+          value: Number(duplicateInfo.formValues.value),
+        }),
+      });
+      
+      if (response.ok) {
+        toast.success('Pipeline item created successfully (duplicate allowed)');
+        setShowDuplicateDialog(false);
+        setDuplicateInfo(null);
+        onSuccess?.();
+        router.push('/pipeline');
+      } else {
+        const error = await response.json();
+        toast.error(error.error || 'Failed to create pipeline item');
+      }
+    } catch (error) {
+      console.error('Error force creating pipeline item:', error);
+      toast.error('Failed to create pipeline item');
+    }
   };
 
   return (
@@ -356,6 +419,22 @@ export function PipelineForm({
           </Button>
         </div>
       </form>
+
+      {/* Duplicate Detection Dialog */}
+      <ConfirmDialog
+        open={showDuplicateDialog}
+        title="Duplicate Lead Detected"
+        description={`${duplicateInfo?.details}\n\nDo you want to continue and create this as a duplicate entry, or would you like to cancel and review the existing lead?`}
+        confirmLabel="Create Anyway"
+        cancelLabel="Cancel"
+        onConfirm={handleForceCreate}
+        onOpenChange={(open) => {
+          setShowDuplicateDialog(open);
+          if (!open) {
+            setDuplicateInfo(null);
+          }
+        }}
+      />
     </Form>
   );
 } 

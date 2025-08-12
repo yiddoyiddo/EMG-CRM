@@ -17,6 +17,8 @@ import { toast } from 'sonner';
 import { formatDateUKShort, formatDateForInput } from '@/lib/date-utils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
+import { EDITORIAL_ELIGIBLE_STATUSES, shouldSyncToEditorial } from '@/lib/editorial-sync';
+import { ConfirmDialog } from './confirm-dialog';
 
 interface PipelineEditableCellProps {
   value: any;
@@ -144,6 +146,8 @@ export function PipelineEditableCell({
 }: PipelineEditableCellProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [tempValue, setTempValue] = useState(value || '');
+  const [showEditorialConfirm, setShowEditorialConfirm] = useState(false);
+  const [pendingUpdate, setPendingUpdate] = useState<any>(null);
   const { mutate: updatePipelineItem } = useUpdatePipelineItem();
   const { mutate: createActivityLog } = useCreateActivityLog();
 
@@ -172,15 +176,28 @@ export function PipelineEditableCell({
       [field]: processedValue,
     };
 
+    // Check if this is a status update that should trigger editorial sync confirmation
+    if (field === 'status' && shouldSyncToEditorial(value || '', tempValue)) {
+      setPendingUpdate(updatedItem);
+      setShowEditorialConfirm(true);
+      return;
+    }
+
+    // Proceed with normal update
+    performUpdate(updatedItem);
+  };
+
+  const performUpdate = (updatedItem: any) => {
     updatePipelineItem(updatedItem, {
       onSuccess: () => {
         setIsEditing(false);
+        setPendingUpdate(null);
         
         // Log the activity
         createActivityLog({
           bdr: item.bdr,
           activityType: 'Note_Added',
-          description: `Updated ${field}: ${value || 'empty'} → ${tempValue || 'empty'}`,
+          description: `Updated ${field}: ${value || 'empty'} → ${updatedItem[field] || 'empty'}`,
           pipelineItemId: item.id,
           notes: `Field ${field} updated`
         });
@@ -188,6 +205,7 @@ export function PipelineEditableCell({
       onError: (error) => {
         toast.error(`Failed to update ${field}`);
         setTempValue(value || '');
+        setPendingUpdate(null);
       }
     });
   };
@@ -195,6 +213,45 @@ export function PipelineEditableCell({
   const handleCancel = () => {
     setTempValue(value || '');
     setIsEditing(false);
+    setPendingUpdate(null);
+  };
+
+  const handleEditorialConfirm = async () => {
+    if (!pendingUpdate) return;
+    
+    // Update the pipeline item first
+    performUpdate(pendingUpdate);
+    setShowEditorialConfirm(false);
+
+    // Then sync to editorial board
+    try {
+      const response = await fetch('/api/editorial/sync', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          pipelineItemId: item.id,
+        }),
+      });
+
+      if (response.ok) {
+        toast.success('Pipeline item synced to editorial board');
+      } else {
+        const error = await response.json();
+        toast.error(error.error || 'Failed to sync to editorial board');
+      }
+    } catch (error) {
+      toast.error('Failed to sync to editorial board');
+    }
+  };
+
+  const handleEditorialDecline = () => {
+    if (!pendingUpdate) return;
+    
+    // Update the pipeline item without syncing to editorial
+    performUpdate(pendingUpdate);
+    setShowEditorialConfirm(false);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -262,73 +319,89 @@ export function PipelineEditableCell({
   }
 
   return (
-    <div
-      className={`group cursor-pointer hover:bg-muted/50 rounded px-1 py-0.5 flex items-center gap-1 ${className}`}
-      onClick={(e) => e.stopPropagation()}
-    >
-      {isDate ? (
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant="ghost"
-              className={cn(
-                "h-auto p-0 text-xs justify-start text-left font-normal hover:bg-transparent",
-                !value && "text-muted-foreground"
-              )}
-            >
-              {value ? (
-                formatDateUKShort(value)
-              ) : (
-                <span>{placeholder || 'Click to set date'}</span>
-              )}
-              <Edit className="h-3 w-3 opacity-0 group-hover:opacity-50 transition-opacity ml-1" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start" onClick={(e) => e.stopPropagation()}>
-            <SimpleCalendar
-              selected={value ? new Date(value) : undefined}
-              onSelect={(date) => {
-                if (date) {
-                  const dateString = date.toISOString();
-                  setTempValue(dateString);
-                  // Update the item directly without going through the editing state
-                  const updatedItem = {
-                    ...item,
-                    [field]: dateString,
-                  };
-                  updatePipelineItem(updatedItem, {
-                    onSuccess: () => {
-                      // Log the activity
-                      createActivityLog({
-                        bdr: item.bdr,
-                        activityType: 'Note_Added',
-                        description: `Updated ${field}: ${value || 'empty'} → ${dateString}`,
-                        pipelineItemId: item.id,
-                        notes: `Field ${field} updated`
-                      });
-                    },
-                    onError: (error) => {
-                      toast.error(`Failed to update ${field}`);
-                    }
-                  });
-                }
-              }}
-            />
-          </PopoverContent>
-        </Popover>
-      ) : (
-        <div
-          onClick={(e) => {
-            e.stopPropagation();
-            setIsEditing(true);
-          }}
-        >
-          <span className="text-xs truncate">
-            {value || placeholder || 'Click to edit'}
-          </span>
-          <Edit className="h-3 w-3 opacity-0 group-hover:opacity-50 transition-opacity" />
-        </div>
-      )}
-    </div>
+    <>
+      <div
+        className={`group cursor-pointer hover:bg-muted/50 rounded px-1 py-0.5 flex items-center gap-1 ${className}`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {isDate ? (
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="ghost"
+                className={cn(
+                  "h-auto p-0 text-xs justify-start text-left font-normal hover:bg-transparent",
+                  !value && "text-muted-foreground"
+                )}
+              >
+                {value ? (
+                  formatDateUKShort(value)
+                ) : (
+                  <span>{placeholder || 'Click to set date'}</span>
+                )}
+                <Edit className="h-3 w-3 opacity-0 group-hover:opacity-50 transition-opacity ml-1" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start" onClick={(e) => e.stopPropagation()}>
+              <SimpleCalendar
+                selected={value ? new Date(value) : undefined}
+                onSelect={(date) => {
+                  if (date) {
+                    const dateString = date.toISOString();
+                    setTempValue(dateString);
+                    // Update the item directly without going through the editing state
+                    const updatedItem = {
+                      ...item,
+                      [field]: dateString,
+                    };
+                    updatePipelineItem(updatedItem, {
+                      onSuccess: () => {
+                        // Log the activity
+                        createActivityLog({
+                          bdr: item.bdr,
+                          activityType: 'Note_Added',
+                          description: `Updated ${field}: ${value || 'empty'} → ${dateString}`,
+                          pipelineItemId: item.id,
+                          notes: `Field ${field} updated`
+                        });
+                      },
+                      onError: (error) => {
+                        toast.error(`Failed to update ${field}`);
+                      }
+                    });
+                  }
+                }}
+              />
+            </PopoverContent>
+          </Popover>
+        ) : (
+          <div
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsEditing(true);
+            }}
+          >
+            <span className="text-xs truncate">
+              {value || placeholder || 'Click to edit'}
+            </span>
+            <Edit className="h-3 w-3 opacity-0 group-hover:opacity-50 transition-opacity" />
+          </div>
+        )}
+      </div>
+
+      <ConfirmDialog
+        open={showEditorialConfirm}
+        title="Add to Editorial Board?"
+        description={`This will update the status to "${tempValue}" and add this item to the editorial board. Do you want to proceed?`}
+        confirmLabel="Yes, Add to Editorial"
+        cancelLabel="Just Update Status"
+        onConfirm={handleEditorialConfirm}
+        onOpenChange={(open) => {
+          if (!open) {
+            handleEditorialDecline();
+          }
+        }}
+      />
+    </>
   );
 } 

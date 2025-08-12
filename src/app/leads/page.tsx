@@ -17,13 +17,14 @@ import {
   DropdownMenuTrigger,
   DropdownMenuCheckboxItem,
 } from '@/components/ui/dropdown-menu';
-import { Columns, Filter, Plus } from 'lucide-react';
+import { Columns, Filter, Plus, Sparkles } from 'lucide-react';
 import { leadSourceEnum, leadStatusEnum } from '@/lib/validations';
 import { VisibilityState } from '@tanstack/react-table';
 import { Lead } from '@/lib/hooks';
 import { Navbar } from '@/components/ui/navbar';
 import { AddBdrDialog } from '@/components/ui/add-bdr-dialog';
 import { useRouter } from 'next/navigation';
+import { LeadsSavedViews, LeadsView } from '@/components/leads-saved-views';
 
 function ErrorFallback({ error, resetErrorBoundary }: { error: Error; resetErrorBoundary: () => void }) {
   return (
@@ -41,6 +42,8 @@ function LeadsContent() {
   const [globalFilter, setGlobalFilter] = useState('');
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+  // Initialize to a fixed value to avoid hydration mismatch; read real value after mount
+  const [beginnerMode, setBeginnerMode] = useState<boolean>(false);
   const resizeTimeout = useRef<NodeJS.Timeout | null>(null);
   const isUpdatingVisibility = useRef(false);
   const { bdrs, addBdr } = useBdrManager();
@@ -65,8 +68,8 @@ function LeadsContent() {
     isUpdatingVisibility.current = true;
     
     setColumnVisibility(prev => {
-      // Create a new object to ensure the state update is recognized
-      const updated = {...prev, ...newState};
+      // Replace visibility entirely to ensure predictable layouts
+      const updated = { ...newState };
       
       // Schedule a reset of the updating flag after this render cycle
       setTimeout(() => {
@@ -94,36 +97,43 @@ function LeadsContent() {
     const width = window.innerWidth;
     const newVisibility: VisibilityState = {};
     
-    // Show all columns on large screens
-    if (width >= 1280) {
+    if (beginnerMode) {
+      // Beginner: show only high priority columns on all screen sizes
       columns.forEach(column => {
-        if (!column.id) return;
-        newVisibility[column.id] = true;
-      });
-    }
-    // Show high and medium priority columns on medium screens
-    else if (width >= 768) {
-      columns.forEach(column => {
-        if (!column.id) return;
-        
+        const colId = (column as any).id ?? (column as any).accessorKey;
+        if (!colId) return;
         const priority = (column.meta as any)?.priority;
-        newVisibility[column.id] = priority === 'high' || priority === 'medium';
+        newVisibility[colId] = priority === 'high';
       });
-    }
-    // Show only high priority columns on small screens
-    else {
+    } else if (width >= 1280) {
+      // Advanced large screens: show all columns
       columns.forEach(column => {
-        if (!column.id) return;
-        
+        const colId = (column as any).id ?? (column as any).accessorKey;
+        if (!colId) return;
+        newVisibility[colId] = true;
+      });
+    } else if (width >= 768) {
+      // Advanced medium screens: show high and medium
+      columns.forEach(column => {
+        const colId = (column as any).id ?? (column as any).accessorKey;
+        if (!colId) return;
         const priority = (column.meta as any)?.priority;
-        newVisibility[column.id] = priority === 'high';
+        newVisibility[colId] = priority === 'high' || priority === 'medium';
+      });
+    } else {
+      // Advanced small screens: show only high
+      columns.forEach(column => {
+        const colId = (column as any).id ?? (column as any).accessorKey;
+        if (!colId) return;
+        const priority = (column.meta as any)?.priority;
+        newVisibility[colId] = priority === 'high';
       });
     }
 
     safeSetColumnVisibility(newVisibility);
-  }, [columns, safeSetColumnVisibility]);
+  }, [columns, safeSetColumnVisibility, beginnerMode]);
 
-  // Set default column visibility based on screen size
+  // Set default column visibility based on screen size and beginner mode
   useEffect(() => {
     // Initialize column visibility
     updateColumnVisibility();
@@ -151,6 +161,31 @@ function LeadsContent() {
       }
     };
   }, [updateColumnVisibility]);
+
+  // Read beginner mode from localStorage after mount to avoid hydration mismatch
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const stored = window.localStorage.getItem('leads.beginnerMode');
+      if (stored !== null) {
+        setBeginnerMode(stored === 'true');
+      } else {
+        // Default to true if not set
+        setBeginnerMode(true);
+      }
+    }
+  }, []);
+
+  // Persist beginner mode
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('leads.beginnerMode', beginnerMode ? 'true' : 'false');
+    }
+  }, [beginnerMode]);
+
+  // Recompute column visibility when beginner mode toggles
+  useEffect(() => {
+    updateColumnVisibility();
+  }, [beginnerMode, updateColumnVisibility]);
 
   const handlePaginationChange = (newPageIndex: number, newPageSize: number) => {
     setPageIndex(newPageIndex);
@@ -199,10 +234,18 @@ function LeadsContent() {
           <div className="flex gap-2">
             <Button 
               onClick={() => router.push('/leads/new')}
-              className="bg-blue-600 hover:bg-blue-700"
+              className="h-9"
             >
               <Plus className="h-4 w-4 mr-2" />
               Add New Lead
+            </Button>
+            <Button
+              variant={beginnerMode ? 'secondary' : 'outline'}
+              className="h-9 px-3"
+              onClick={() => setBeginnerMode((v) => !v)}
+            >
+              <Sparkles className="h-4 w-4 mr-2" />
+              {beginnerMode ? 'Beginner Mode' : 'Advanced Mode'}
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -239,6 +282,7 @@ function LeadsContent() {
                       onCheckedChange={(checked) => {
                         handleColumnVisibilityChange(column.id!, checked);
                       }}
+                      disabled={beginnerMode}
                     >
                       {headerName}
                     </DropdownMenuCheckboxItem>
@@ -305,6 +349,18 @@ function LeadsContent() {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
+          <LeadsSavedViews
+            filters={filters}
+            columnVisibility={columnVisibility as Record<string, boolean>}
+            onApply={(view: LeadsView) => {
+              setFilters(view.filters);
+              safeSetColumnVisibility(view.columnVisibility as unknown as VisibilityState);
+            }}
+          />
+        </div>
+        {/* Enterprise control surface */}
+        <div className="rounded-xl border border-white/30 dark:border-white/10 bg-white/60 dark:bg-white/[0.05] backdrop-blur p-3">
+          <div className="text-sm text-muted-foreground">Use the search, filters and saved views to quickly segment leads.</div>
         </div>
         <LeadsTable
           data={leads}

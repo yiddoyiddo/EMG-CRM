@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { LeadForm } from '@/components/lead-form';
-import { useLead, useUpdateLead } from '@/lib/hooks';
+import { useLead, useUpdateLead, useConvertLeadToPipeline } from '@/lib/hooks';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useRouter } from 'next/navigation';
 import { use } from 'react';
@@ -14,11 +14,23 @@ export default function EditLeadPage({ params }: { params: Promise<{ id: string 
   
   const { data: lead, isLoading: isLoadingLead, isError } = useLead(leadId);
   const { mutate: updateLead, isPending } = useUpdateLead();
+  const { mutate: convertLead } = useConvertLeadToPipeline();
   
   const handleSubmit = (data: any) => {
     updateLead(data, {
       onSuccess: () => {
         router.push('/leads');
+      }
+    });
+  };
+
+  const handleSaveAndAddToPipeline = (data: any) => {
+    updateLead(data, {
+      onSuccess: (updated) => {
+        convertLead(
+          { leadId: updated.id, category: 'Pipeline', status: 'Proposal - Media' },
+          { onSuccess: () => router.push('/pipeline') }
+        );
       }
     });
   };
@@ -57,6 +69,7 @@ export default function EditLeadPage({ params }: { params: Promise<{ id: string 
           <LeadForm 
             lead={lead} 
             onSubmit={handleSubmit} 
+            onSaveAndAddToPipeline={handleSaveAndAddToPipeline}
             isSubmitting={isPending} 
           />
         </CardContent>

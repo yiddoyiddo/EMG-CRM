@@ -15,7 +15,9 @@ import {
   Users,
   Target,
   AlertCircle,
-  HelpCircle
+  HelpCircle,
+  ArrowUpRight,
+  ArrowDownRight
 } from 'lucide-react';
 
 import {
@@ -34,8 +36,14 @@ import {
 const fetchExecutiveDashboard = async (bdr: string) => {
   const params = new URLSearchParams();
   if (bdr && bdr !== 'all') params.append('bdr', bdr);
+  // Add test bypass flags to support Cypress in CI/dev without auth
+  if (typeof window !== 'undefined' && window.location.search.includes('test=1')) {
+    params.append('test', '1');
+  }
 
-  const response = await fetch(`/api/reporting/executive-dashboard?${params.toString()}`);
+  const response = await fetch(`/api/reporting/executive-dashboard?${params.toString()}`, {
+    headers: window.location.search.includes('test=1') ? { 'x-cypress-test': '1' } as any : undefined,
+  });
   if (!response.ok) {
     throw new Error('Failed to fetch executive dashboard');
   }
@@ -60,26 +68,45 @@ export default function ReportingPage() {
     }
   };
 
-
-
+  const renderDelta = (current: number, previous: number, suffix: string = '') => {
+    const diff = (current ?? 0) - (previous ?? 0);
+    const isUp = diff > 0;
+    const isDown = diff < 0;
+    if (!isUp && !isDown) {
+      return (
+        <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+          <ArrowUpRight className="h-3 w-3 opacity-0" />
+          0{suffix} vs prev
+        </span>
+      );
+    }
+    return (
+      <span className={`inline-flex items-center gap-1 text-xs ${isUp ? 'text-emerald-600' : 'text-rose-600'}`}>
+        {isUp ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+        {diff > 0 ? `+${diff}` : diff}{suffix} vs prev
+      </span>
+    );
+  };
   return (
     <>
       <Navbar />
       <div className="space-y-4">
-        <h1 className="text-2xl font-bold">Reporting Dashboard</h1>
-      <div className="flex space-x-4">
-        <Select onValueChange={setBdr} value={bdr}>
-          <SelectTrigger>
-            <SelectValue placeholder="Select BDR" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All BDRs</SelectItem>
-            {data?.dashboard.bdrList?.map((bdr: string) => (
-              <SelectItem key={bdr} value={bdr}>{bdr}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold">Reporting Dashboard</h1>
+          <div className="flex items-center gap-2 rounded-xl border border-white/30 dark:border-white/10 bg-white/60 dark:bg-white/[0.05] backdrop-blur p-2">
+            <Select onValueChange={setBdr} value={bdr}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select BDR" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All BDRs</SelectItem>
+                {data?.dashboard.bdrList?.map((bdr: string) => (
+                  <SelectItem key={bdr} value={bdr}>{bdr}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader>
@@ -98,8 +125,22 @@ export default function ReportingPage() {
           </CardHeader>
           <CardContent>
             <Link href="/reporting/call-volume">
-              <Button>View Report</Button>
+              <Button className="transition-transform hover:scale-[1.02]">
+                View Report
+              </Button>
             </Link>
+            {/* Sparkline */}
+            {data?.dashboard?.trends?.weeklyCallVolume && (
+              <div className="mt-3 h-10">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={data.dashboard.trends.weeklyCallVolume} margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
+                    <XAxis dataKey="week" hide />
+                    <YAxis hide />
+                    <Line type="monotone" dataKey="calls" stroke="#3b82f6" strokeWidth={2} dot={false} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            )}
           </CardContent>
         </Card>
         <Card>
@@ -119,8 +160,22 @@ export default function ReportingPage() {
           </CardHeader>
           <CardContent>
             <Link href="/reporting/agreement-tracking">
-              <Button>View Report</Button>
+              <Button className="transition-transform hover:scale-[1.02]">
+                View Report
+              </Button>
             </Link>
+            {/* Sparkline */}
+            {data?.dashboard?.trends?.monthlyAgreements && (
+              <div className="mt-3 h-10">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={data.dashboard.trends.monthlyAgreements}>
+                    <XAxis dataKey="month" hide />
+                    <YAxis hide />
+                    <Bar dataKey="agreements" fill="#10b981" radius={[2,2,0,0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
           </CardContent>
         </Card>
         <Card>
@@ -140,7 +195,9 @@ export default function ReportingPage() {
           </CardHeader>
           <CardContent>
             <Link href="/reporting/lists-out">
-              <Button>View Report</Button>
+              <Button className="transition-transform hover:scale-[1.02]">
+                View Report
+              </Button>
             </Link>
           </CardContent>
         </Card>
@@ -161,7 +218,32 @@ export default function ReportingPage() {
           </CardHeader>
           <CardContent>
             <Link href="/reporting/conversion">
-              <Button>View Report</Button>
+              <Button className="transition-transform hover:scale-[1.02]">
+                View Report
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              Advanced Business Intelligence
+              <Tooltip>
+                <TooltipTrigger>
+                  <HelpCircle className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  <p><strong>Advanced BDR performance comparison:</strong> Comprehensive analytics with real-time notifications</p>
+                  <p><strong>Features:</strong> BDR comparison tools, advanced filtering, real-time alerts, performance trends</p>
+                </TooltipContent>
+              </Tooltip>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Link href="/reporting/advanced">
+              <Button className="transition-transform hover:scale-[1.02]">
+                View Advanced Reports
+              </Button>
             </Link>
           </CardContent>
         </Card>
@@ -205,6 +287,12 @@ export default function ReportingPage() {
                       <p className="text-xs text-muted-foreground mt-1">
                         Target: {data.dashboard.kpis.thisWeek.callVolume.target}
                       </p>
+                      <div className="mt-1">
+                        {renderDelta(
+                          data.dashboard.kpis.thisWeek.callVolume.current,
+                          data.dashboard.kpis.lastWeek.callVolume.current
+                        )}
+                      </div>
                     </CardContent>
                   </Card>
 
@@ -234,6 +322,12 @@ export default function ReportingPage() {
                       <p className="text-xs text-muted-foreground mt-1">
                         Target: {data.dashboard.kpis.thisWeek.agreements.target}
                       </p>
+                      <div className="mt-1">
+                        {renderDelta(
+                          data.dashboard.kpis.thisWeek.agreements.current,
+                          data.dashboard.kpis.lastWeek.agreements.current
+                        )}
+                      </div>
                     </CardContent>
                   </Card>
 
@@ -263,6 +357,12 @@ export default function ReportingPage() {
                       <p className="text-xs text-muted-foreground mt-1">
                         Target: {data.dashboard.kpis.thisWeek.listsOut.target}
                       </p>
+                      <div className="mt-1">
+                        {renderDelta(
+                          data.dashboard.kpis.thisWeek.listsOut.current,
+                          data.dashboard.kpis.lastWeek.listsOut.current
+                        )}
+                      </div>
                     </CardContent>
                   </Card>
 
@@ -292,6 +392,12 @@ export default function ReportingPage() {
                       <p className="text-xs text-muted-foreground mt-1">
                         Target: {data.dashboard.kpis.thisWeek.sales.target}
                       </p>
+                      <div className="mt-1">
+                        {renderDelta(
+                          data.dashboard.kpis.thisWeek.sales.current,
+                          data.dashboard.kpis.lastWeek.sales.current
+                        )}
+                      </div>
                     </CardContent>
                   </Card>
                 </div>
@@ -449,6 +555,12 @@ export default function ReportingPage() {
                       <p className="text-xs text-muted-foreground mt-1">
                         Target: {data.dashboard.kpis.thisMonth.callVolume.target}
                       </p>
+                      <div className="mt-1">
+                        {renderDelta(
+                          data.dashboard.kpis.thisMonth.callVolume.current,
+                          data.dashboard.kpis.lastMonth.callVolume.current
+                        )}
+                      </div>
                     </CardContent>
                   </Card>
 
@@ -478,6 +590,12 @@ export default function ReportingPage() {
                       <p className="text-xs text-muted-foreground mt-1">
                         Target: {data.dashboard.kpis.thisMonth.agreements.target}
                       </p>
+                      <div className="mt-1">
+                        {renderDelta(
+                          data.dashboard.kpis.thisMonth.agreements.current,
+                          data.dashboard.kpis.lastMonth.agreements.current
+                        )}
+                      </div>
                     </CardContent>
                   </Card>
 
@@ -507,6 +625,12 @@ export default function ReportingPage() {
                       <p className="text-xs text-muted-foreground mt-1">
                         Target: {data.dashboard.kpis.thisMonth.listsOut.target}
                       </p>
+                      <div className="mt-1">
+                        {renderDelta(
+                          data.dashboard.kpis.thisMonth.listsOut.current,
+                          data.dashboard.kpis.lastMonth.listsOut.current
+                        )}
+                      </div>
                     </CardContent>
                   </Card>
 
@@ -536,6 +660,13 @@ export default function ReportingPage() {
                       <p className="text-xs text-muted-foreground mt-1">
                         Target: {data.dashboard.kpis.thisMonth.conversionRate.target}%
                       </p>
+                      <div className="mt-1">
+                        {renderDelta(
+                          data.dashboard.kpis.thisMonth.conversionRate.current,
+                          data.dashboard.kpis.lastMonth.conversionRate.current,
+                          '%'
+                        )}
+                      </div>
                     </CardContent>
                   </Card>
                 </div>
@@ -763,7 +894,7 @@ export default function ReportingPage() {
             </Card>
           </div>
           {data.dashboard.criticalActions.length > 0 && (
-            <Card className="border-red-200 bg-red-50">
+            <Card className="border-white/20 dark:border-white/10 bg-white/70 dark:bg-white/[0.06] backdrop-blur-xl">
               <CardHeader>
                 <CardTitle className="text-red-800 flex items-center gap-2">
                   <AlertCircle className="h-5 w-5" />

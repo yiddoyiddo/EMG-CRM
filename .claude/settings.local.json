@@ -21,7 +21,11 @@
       "Bash(node:*)",
       "Bash(pkill:*)",
       "Bash(timeout 10 npm run dev)",
-      "Bash(timeout 8 npm run dev)"
+      "Bash(timeout 8 npm run dev)",
+      "Bash(npx:*)",
+      "Bash(npm run typecheck:*)",
+      "Bash(npm run:*)",
+      "Bash(psql:*)"
     ],
     "deny": []
   }

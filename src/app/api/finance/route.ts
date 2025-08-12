@@ -60,8 +60,14 @@ export async function GET(req: NextRequest) {
     if (status) where.status = status;
     // Note: For BDRs, we ignore the 'bdr' filter param since they can only see their own data
     // For Admins, we can still apply the bdr filter if provided
-    if (bdr && role === Role.ADMIN) {
-      where.bdr = bdr; // Changed from where.bdr = { name: bdr } to where.bdr = bdr
+    if (bdr) {
+      // Accept BDR by name in UI; map to userId for query
+      const targetUser = await prisma.user.findFirst({ where: { name: bdr }, select: { id: true } });
+      if (targetUser) {
+        where.bdrId = targetUser.id;
+      } else {
+        where.bdrId = '___NO_MATCH___';
+      }
     }
     if (month) where.month = month;
     
@@ -201,27 +207,36 @@ export async function GET(req: NextRequest) {
     }
     
     if (groupByMonth) {
-      // Get all entries grouped by month
+      // Get all entries grouped by month with BDR relation for name resolution
       const financeEntries = await prisma.financeEntry.findMany({
         where,
         orderBy: [
           { month: 'asc' },
           { createdAt: 'desc' }
-        ]
+        ],
+        include: {
+          bdr: { select: { name: true } }
+        }
       });
-      
+
+      // Map BDR relation to string name for UI
+      const normalized = financeEntries.map((e: any) => ({
+        ...e,
+        bdr: e.bdr?.name || '',
+      }));
+
       // Group entries by month
-      const groupedEntries = financeEntries.reduce((acc: { [key: string]: typeof financeEntries }, entry) => {
+      const groupedEntries = normalized.reduce((acc: { [key: string]: typeof normalized }, entry) => {
         if (!acc[entry.month]) {
           acc[entry.month] = [];
         }
         acc[entry.month].push(entry);
         return acc;
-      }, {});
-      
+      }, {} as { [key: string]: typeof normalized });
+
       return NextResponse.json({
         groupedEntries,
-        total: financeEntries.length,
+        total: normalized.length,
       });
     }
     
@@ -233,24 +248,10 @@ export async function GET(req: NextRequest) {
       where,
       skip,
       take: pageSize,
-      select: {
-        id: true,
-        company: true,
-        bdr: true, // This is now a string field
-        leadGen: true,
-        status: true,
-        invoiceDate: true,
-        dueDate: true,
-        soldAmount: true,
-        gbpAmount: true,
-        exchangeRate: true,
-        exchangeRateDate: true,
-        actualGbpReceived: true,
-        notes: true,
-        commissionPaid: true,
-        month: true,
-        createdAt: true,
-        updatedAt: true
+      include: {
+        bdr: {
+          select: { id: true, name: true }
+        }
       },
       orderBy: [
         { month: 'desc' },
@@ -259,7 +260,10 @@ export async function GET(req: NextRequest) {
     });
     
     return NextResponse.json({
-      financeEntries,
+      financeEntries: financeEntries.map((e: any) => ({
+        ...e,
+        bdr: e.bdr?.name || '',
+      })),
       total,
       page,
       pageSize,
@@ -334,7 +338,22 @@ export async function POST(req: NextRequest) {
     const financeEntry = await prisma.financeEntry.create({
       data: processedData
     });
-    
+
+    // Notify finance viewers about new deal
+    try {
+      const viewers = await prisma.user.findMany({ where: { isActive: true }, select: { id: true, role: true } });
+      const eligible = viewers.filter(u => u.role === Role.ADMIN || u.role === Role.MANAGER || u.role === Role.DIRECTOR || u.role === Role.TEAM_LEAD || u.role === Role.BDR);
+      const title = 'New Finance Deal Added';
+      const message = `${financeEntry.company} • ${financeEntry.status}${financeEntry.gbpAmount ? ` • £${financeEntry.gbpAmount}` : ''}`;
+      await Promise.all(
+        eligible.map(u => fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ''}/api/reporting/advanced/notifications`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: u.id, type: 'info', title, message, priority: 'high' })
+        }).catch(() => null))
+      );
+    } catch {}
+
     return NextResponse.json(financeEntry, { status: 201 });
     
   } catch (error) {

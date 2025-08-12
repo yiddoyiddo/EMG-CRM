@@ -1,6 +1,9 @@
 import { prisma } from "@/lib/db";
 import { updateLeadSchema } from "@/lib/validations";
 import { NextRequest, NextResponse } from "next/server";
+import { PERMISSIONS, hasPermission } from "@/lib/permissions";
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth-options';
 
 interface RouteParams {
   params: {
@@ -134,6 +137,48 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
           },
         });
       }
+    }
+
+    // Notify finance viewers if notes indicate a deal was added
+    try {
+      const session = await getServerSession(authOptions);
+      const updatedNotes: string = (data?.notes ?? '').toString();
+      const previousNotes: string = (existingLead?.notes ?? '').toString();
+      const notesChanged = updatedNotes !== previousNotes;
+      const dealKeywords = [
+        /\bdeal\b/i,
+        /\bsold\b/i,
+        /\bagreement\b/i,
+        /\binvoice\b/i,
+        /\bgbp\b/i,
+        /\bamount\b/i,
+      ];
+      const hasDealSignal = notesChanged && dealKeywords.some((re) => re.test(updatedNotes));
+      if (hasDealSignal) {
+        // Find all users with finance board access (READ on FINANCE)
+        const financeUsers = await prisma.user.findMany({
+          where: { isActive: true },
+          select: { id: true, role: true },
+        });
+        const recipients = financeUsers
+          .filter((u) => hasPermission(u as any, 2 /* Resource.FINANCE */ as any, 1 /* Action.READ */ as any))
+          .map((u) => u.id);
+        // Emit ephemeral notifications via existing notifications endpoint contract (no DB persistence)
+        const title = 'Deal activity on lead notes';
+        const msg = `Lead ${lead.name} (${lead.company || 'Unknown'}) notes indicate a deal update.`;
+        // Best-effort fire-and-forget post per recipient
+        await Promise.all(
+          recipients.map((uid) =>
+            fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ''}/api/reporting/advanced/notifications`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ userId: uid, type: 'info', title, message: msg, priority: 'high' }),
+            }).catch(() => null)
+          )
+        );
+      }
+    } catch (e) {
+      // Do not fail lead update on notification error
     }
     
     return NextResponse.json(lead);

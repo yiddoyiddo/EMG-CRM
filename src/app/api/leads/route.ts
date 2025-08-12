@@ -1,24 +1,18 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/db";
 import { createLeadSchema } from "@/lib/validations";
 import { NextRequest } from "next/server";
-import { Role } from "@prisma/client";
+import { Resource, Action, DuplicateAction } from "@prisma/client";
+import { getAuthenticatedUser, createErrorResponse, createSuccessResponse } from "@/lib/auth-api";
+import { hasPermission, getDataAccessFilter } from "@/lib/permissions";
+import { SecurityService, withSecurity } from "@/lib/security";
+import { duplicateDetectionService } from "@/lib/duplicate-detection";
 
 // GET - List leads with filters
 export async function GET(req: NextRequest) {
-  try {
-    // 1. Get Session securely on the server
-    const session = await getServerSession(authOptions);
-
-    // 2. Check Authentication
-    if (!session || !session.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { role, id: userId, name: userName } = session.user;
-
+  return withSecurity(Resource.LEADS, Action.READ, async (context) => {
     const { searchParams } = new URL(req.url);
     const search = searchParams.get('search') || '';
     const status = searchParams.get('status') || undefined;
@@ -28,21 +22,16 @@ export async function GET(req: NextRequest) {
     const pageSize = parseInt(searchParams.get('pageSize') || '10');
     const skip = (page - 1) * pageSize;
     
-    // 3. Enforce Authorization (RBAC) - Build where clause with role-based filtering
-    const where: any = {};
-    
-    // Role-based data filtering
-    if (role === Role.BDR) {
-      // BDRs can only see their own leads
-      where.bdr = userName; // Use the user's name as the BDR filter
-    } else if (role === Role.ADMIN) {
-      // Admins can see all leads - no additional filtering
-    } else {
-      // Unknown role - deny access
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    // Build base query
+    let baseQuery: any = {
+      skip,
+      take: pageSize,
+      orderBy: { addedDate: 'desc' }
+    };
 
-    // Apply search filters
+    // Build where clause with filters
+    let where: any = {};
+    
     if (search) {
       where.OR = [
         { name: { contains: search, mode: 'insensitive' } },
@@ -53,29 +42,33 @@ export async function GET(req: NextRequest) {
     if (status) where.status = status;
     if (source) where.source = source;
     
-    // Note: For BDRs, we ignore the 'bdr' filter param since they can only see their own data
-    // For Admins, we can still apply the bdr filter if provided
-    if (bdr && role === Role.ADMIN) {
-      where.bdr = bdr; // This is now a string field
+    // Apply BDR filter for users with appropriate permissions
+    if (bdr && (context.permissions.includes(`${Resource.LEADS}:${Action.VIEW_ALL}`) || context.permissions.includes(`${Resource.LEADS}:${Action.VIEW_TEAM}`))) {
+      const targetUser = await prisma.user.findFirst({ where: { name: bdr }, select: { id: true } });
+      if (targetUser) {
+        where.bdrId = targetUser.id;
+      } else {
+        where.bdrId = '___NO_MATCH___';
+      }
     }
+
+    baseQuery.where = where;
     
-    // Get total count
-    const total = await prisma.lead.count({ where });
+    // Apply row-level security
+    const secureQuery = SecurityService.buildSecureQuery(baseQuery, context, Resource.LEADS);
+    
+    // Get total count with same security restrictions
+    const countQuery = SecurityService.buildSecureQuery({ where }, context, Resource.LEADS);
+    const total = await prisma.lead.count(countQuery);
     
     // Get leads with pipeline information
     const leads = await prisma.lead.findMany({
-      where,
-      skip,
-      take: pageSize,
-      orderBy: {
-        addedDate: 'desc' // Sort by addedDate in descending order (newest first)
-      },
+      ...secureQuery,
       select: {
         id: true,
         name: true,
         title: true,
         addedDate: true,
-        bdr: true, // This is now a string field
         company: true,
         source: true,
         status: true,
@@ -83,101 +76,118 @@ export async function GET(req: NextRequest) {
         phone: true,
         notes: true,
         email: true,
+        bdr: { select: { name: true } },
         pipelineItems: {
           select: {
             id: true,
             category: true,
             status: true,
-          }
+            lastUpdated: true,
+          },
+          take: 1,
+          orderBy: { lastUpdated: 'desc' }
         }
       }
     });
     
-    // Transform the response to include inPipeline flag
+    // Transform the response
     const transformedLeads = leads.map(lead => {
-      const { pipelineItems, ...rest } = lead;
+      const { pipelineItems, bdr, ...rest } = lead as any;
+      const latestItem = pipelineItems[0];
       return {
         ...rest,
+        // Derive lastUpdated from latest pipeline item if available, otherwise fall back to addedDate
+        lastUpdated: latestItem?.lastUpdated || rest.addedDate,
+        bdr: bdr?.name || bdr || null,
         inPipeline: pipelineItems.length > 0,
-        pipelineStatus: pipelineItems[0]?.status || null,
-        pipelineCategory: pipelineItems[0]?.category || null,
+        pipelineStatus: latestItem?.status || null,
+        pipelineCategory: latestItem?.category || null,
       };
     });
 
-    // Calculate total pages
     const totalPages = Math.ceil(total / pageSize);
     
-    return NextResponse.json({
+    return new NextResponse(JSON.stringify({
       leads: transformedLeads,
       total,
       page,
       pageSize,
       totalPages,
+    }), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'private, max-age=30, stale-while-revalidate=60',
+      },
     });
-  } catch (error: any) {
-    console.error("Error fetching leads:", error);
-    return NextResponse.json(
-      { error: error.message || "Failed to fetch leads" },
-      { status: 500 }
-    );
-  }
+  }, req);
 }
 
 export async function POST(req: NextRequest) {
-  try {
-    // 1. Get Session securely on the server
-    const session = await getServerSession(authOptions);
-
-    // 2. Check Authentication
-    if (!session || !session.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { role, id: userId, name: userName } = session.user;
+  return withSecurity(Resource.LEADS, Action.CREATE, async (context) => {
     const data = await req.json();
     
     // Validate the request body
     const validatedData = createLeadSchema.parse(data);
     
-    // 3. Enforce Authorization (RBAC) for lead creation
-    let leadData = { ...validatedData };
+    // Determine BDR assignment based on permissions
+    let bdrId = context.userId; // Default to current user
     
-    if (role === Role.BDR) {
-      // BDRs can only create leads assigned to themselves
-      leadData.bdr = userName; // Use the user's name as the BDR
-    } else if (role === Role.ADMIN) {
-      // Admins can assign leads to any BDR
-      // Use the provided bdr or assign to themselves if not provided
-      if (!leadData.bdr) {
-        leadData.bdr = userName;
-      }
-    } else {
-      // Unknown role - deny access
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    if (validatedData.bdrId && context.permissions.includes(`${Resource.LEADS}:${Action.VIEW_ALL}`)) {
+      // Users with VIEW_ALL permission can assign to any BDR
+      bdrId = validatedData.bdrId;
     }
     
     // Create the lead
     const lead = await prisma.lead.create({
       data: {
-        name: leadData.name,
-        title: leadData.title,
-        bdr: leadData.bdr, // This is now a string field
-        company: leadData.company,
-        source: leadData.source,
-        status: leadData.status,
-        link: leadData.link,
-        phone: leadData.phone,
-        notes: leadData.notes,
-        email: leadData.email,
+        name: validatedData.name,
+        title: validatedData.title,
+        bdrId: bdrId,
+        company: validatedData.company,
+        source: validatedData.source,
+        status: validatedData.status,
+        link: validatedData.link,
+        phone: validatedData.phone,
+        notes: validatedData.notes,
+        email: validatedData.email,
+      },
+      include: {
+        bdr: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            territory: {
+              select: { name: true }
+            }
+          }
+        }
       }
     });
+
+    // Log the creation
+    await SecurityService.logAction({
+      action: 'CREATE',
+      resource: 'LEADS',
+      resourceId: lead.id.toString(),
+      details: {
+        leadName: lead.name,
+        company: lead.company,
+        assignedTo: bdrId
+      }
+    }, req);
     
+    // Fire-and-forget: record a duplicate awareness warning for reporting if this company/email was recently active in other owners
+    if (lead.company || lead.email) {
+      duplicateDetectionService
+        .checkForDuplicates(
+          { name: lead.name, company: lead.company || undefined, email: lead.email || undefined, phone: lead.phone || undefined, title: lead.title || undefined, linkedinUrl: lead.link || undefined },
+          bdrId,
+          DuplicateAction.LEAD_CREATE
+        )
+        .catch(() => {});
+    }
     return NextResponse.json(lead, { status: 201 });
-  } catch (error: any) {
-    console.error("Error creating lead:", error);
-    return NextResponse.json(
-      { error: error.message || "Failed to create lead" },
-      { status: 400 }
-    );
-  }
+  }, req);
 } 

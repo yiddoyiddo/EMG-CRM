@@ -153,7 +153,7 @@ export function UpdatesDialog({ pipelineItem, trigger }: UpdatesDialogProps) {
           {trigger || defaultTrigger}
         </div>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
+      <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col bg-white/70 dark:bg-white/[0.06] backdrop-blur-xl border border-white/20 dark:border-white/10">
         <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <MessageSquare className="h-5 w-5" />

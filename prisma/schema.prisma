@@ -8,46 +8,67 @@ datasource db {
 }
 
 model User {
-  id             String @id @default(cuid())
-  name           String?
-  email          String @unique
-  hashedPassword String
-  role           Role   @default(BDR)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id                 String               @id @default(cuid())
+  name               String?
+  email              String               @unique
+  hashedPassword     String
+  role               Role                 @default(BDR)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  isActive           Boolean              @default(true)
+  lastLoginAt        DateTime?
+  territoryId        String?
+  activityLogs       ActivityLog[]
+  auditLogs          AuditLog[]
+  createdPolicies    DataAccessPolicy[]   @relation("PolicyCreator")
+  dataAccessPolicies DataAccessPolicy[]
+  editorialItems     EditorialBoardItem[]
+  financeEntries     FinanceEntry[]
+  leads              Lead[]
+  pipelineItems      PipelineItem[]
+  managedTerritories Territory[]          @relation("TerritoryManager")
+  territory          Territory?           @relation(fields: [territoryId], references: [id])
+  permissions        UserPermission[]
+  sessions           UserSession[]
+  duplicateWarnings  DuplicateWarning[]
+  duplicateMatches   DuplicateMatch[]
+  duplicateAudits    DuplicateAuditLog[] @relation("DuplicateAudits")
 }
 
 model Lead {
-  id            Int            @id @default(autoincrement())
-  name          String
-  title         String?
-  addedDate     DateTime       @default(now())
-  bdr           String?
-  company       String?
-  source        String
-  status        String
-  link          String?
-  phone         String?
-  notes         String?
-  email         String?        @unique
-  activityLogs  ActivityLog[]
-  pipelineItems PipelineItem[]
+  id             Int                  @id @default(autoincrement())
+  name           String
+  title          String?
+  addedDate      DateTime             @default(now())
+  bdrId          String?
+  company        String?
+  source         String
+  status         String
+  link           String?
+  phone          String?
+  notes          String?
+  email          String?              @unique
+  activityLogs   ActivityLog[]
+  editorialItems EditorialBoardItem[]
+  bdr            User?                @relation(fields: [bdrId], references: [id])
+  pipelineItems  PipelineItem[]
+  duplicateMatches DuplicateMatch[]
 
   @@index([status])
   @@index([source])
   @@index([addedDate])
-  @@index([bdr, addedDate])
-  @@index([bdr])
-  @@index([bdr, status])
+  @@index([bdrId, addedDate])
+  @@index([bdrId])
+  @@index([bdrId, status])
 }
 
 model PipelineItem {
-  id                  Int            @id @default(autoincrement())
+  id                  Int                  @id @default(autoincrement())
   name                String
   title               String?
-  addedDate           DateTime       @default(now())
-  lastUpdated         DateTime       @default(now())
-  bdr                 String
+  addedDate           DateTime             @default(now())
+  lastUpdated         DateTime             @default(now())
+  bdrId               String
   company             String?
   category            String
   status              String
@@ -61,7 +82,7 @@ model PipelineItem {
   leadId              Int?
   callDate            DateTime?
   parentId            Int?
-  isSublist           Boolean        @default(false)
+  isSublist           Boolean              @default(false)
   sublistName         String?
   sortOrder           Int?
   agreementDate       DateTime?
@@ -71,9 +92,12 @@ model PipelineItem {
   partnerListSize     Int?
   totalSalesFromList  Int?
   activityLogs        ActivityLog[]
-  lead                Lead?          @relation(fields: [leadId], references: [id])
-  parent              PipelineItem?  @relation("PipelineSublist", fields: [parentId], references: [id])
-  children            PipelineItem[] @relation("PipelineSublist")
+  editorialItems      EditorialBoardItem[]
+  bdr                 User                 @relation(fields: [bdrId], references: [id])
+  lead                Lead?                @relation(fields: [leadId], references: [id])
+  parent              PipelineItem?        @relation("PipelineSublist", fields: [parentId], references: [id])
+  children            PipelineItem[]       @relation("PipelineSublist")
+  duplicateMatches    DuplicateMatch[]
 
   @@index([callDate])
   @@index([agreementDate])
@@ -89,20 +113,20 @@ model PipelineItem {
   @@index([category, status])
   @@index([parentId, sortOrder])
   @@index([isSublist, parentId])
-  @@index([bdr, agreementDate])
-  @@index([bdr, callDate])
-  @@index([bdr, category])
-  @@index([bdr, firstSaleDate])
-  @@index([bdr])
-  @@index([bdr, lastUpdated])
-  @@index([bdr, partnerListSentDate])
-  @@index([bdr, status])
+  @@index([bdrId, agreementDate])
+  @@index([bdrId, callDate])
+  @@index([bdrId, category])
+  @@index([bdrId, firstSaleDate])
+  @@index([bdrId])
+  @@index([bdrId, lastUpdated])
+  @@index([bdrId, partnerListSentDate])
+  @@index([bdrId, status])
 }
 
 model ActivityLog {
-  id               Int           @id @default(autoincrement())
-  timestamp        DateTime      @default(now())
-  bdr              String
+  id               Int                 @id @default(autoincrement())
+  timestamp        DateTime            @default(now())
+  bdrId            String
   activityType     String
   description      String
   scheduledDate    DateTime?
@@ -114,20 +138,24 @@ model ActivityLog {
   newStatus        String?
   previousCategory String?
   newCategory      String?
-  lead             Lead?         @relation(fields: [leadId], references: [id])
-  pipelineItem     PipelineItem? @relation(fields: [pipelineItemId], references: [id])
+  editorialItemId  Int?
+  bdr              User                @relation(fields: [bdrId], references: [id])
+  editorialItem    EditorialBoardItem? @relation(fields: [editorialItemId], references: [id])
+  lead             Lead?               @relation(fields: [leadId], references: [id])
+  pipelineItem     PipelineItem?       @relation(fields: [pipelineItemId], references: [id])
 
   @@index([activityType, timestamp])
   @@index([timestamp])
   @@index([activityType])
   @@index([pipelineItemId])
   @@index([leadId])
+  @@index([editorialItemId])
   @@index([pipelineItemId, timestamp])
-  @@index([activityType, bdr])
-  @@index([bdr, activityType])
-  @@index([bdr])
-  @@index([bdr, timestamp])
-  @@index([timestamp, bdr])
+  @@index([activityType, bdrId])
+  @@index([bdrId, activityType])
+  @@index([bdrId])
+  @@index([bdrId, timestamp])
+  @@index([timestamp, bdrId])
 }
 
 model KpiTarget {
@@ -139,7 +167,7 @@ model KpiTarget {
 model FinanceEntry {
   id                Int       @id @default(autoincrement())
   company           String
-  bdr               String
+  bdrId             String
   leadGen           Boolean   @default(false)
   status            String
   invoiceDate       DateTime?
@@ -154,6 +182,7 @@ model FinanceEntry {
   month             String    @default("2025-01")
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
+  bdr               User      @relation(fields: [bdrId], references: [id])
 
   @@index([status])
   @@index([invoiceDate])
@@ -163,14 +192,406 @@ model FinanceEntry {
   @@index([status, month])
   @@index([month, createdAt])
   @@index([status, createdAt])
-  @@index([bdr, createdAt])
-  @@index([bdr])
-  @@index([bdr, month])
-  @@index([bdr, status])
-  @@index([bdr, status, month])
+  @@index([bdrId, createdAt])
+  @@index([bdrId])
+  @@index([bdrId, month])
+  @@index([bdrId, status])
+  @@index([bdrId, status, month])
+}
+
+model Territory {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  managerId   String?
+  manager     User?    @relation("TerritoryManager", fields: [managerId], references: [id])
+  users       User[]
+  companyRegistries CompanyRegistry[]
+  contactRegistries ContactRegistry[]
+
+  @@index([isActive])
+}
+
+model Permission {
+  id              String           @id @default(cuid())
+  name            String           @unique
+  resource        Resource
+  action          Action
+  description     String?
+  createdAt       DateTime         @default(now())
+  rolePermissions RolePermission[]
+  userPermissions UserPermission[]
+
+  @@unique([resource, action])
+}
+
+model UserPermission {
+  id           String     @id @default(cuid())
+  userId       String
+  permissionId String
+  grantedAt    DateTime   @default(now())
+  grantedBy    String?
+  expiresAt    DateTime?
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, permissionId])
+}
+
+model RolePermission {
+  id           String     @id @default(cuid())
+  role         Role
+  permissionId String
+  createdAt    DateTime   @default(now())
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([role, permissionId])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String
+  action     String
+  resource   String
+  resourceId String?
+  ipAddress  String?
+  userAgent  String?
+  details    Json?
+  success    Boolean  @default(true)
+  errorMsg   String?
+  timestamp  DateTime @default(now())
+  sessionId  String?
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([action])
+  @@index([resource])
+  @@index([timestamp])
+  @@index([userId, timestamp])
+  @@index([action, resource])
+  @@index([success, timestamp])
+}
+
+model DataAccessPolicy {
+  id         String   @id @default(cuid())
+  userId     String
+  resource   Resource
+  conditions Json
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  createdBy  String
+  creator    User     @relation("PolicyCreator", fields: [createdBy], references: [id])
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([resource])
+  @@index([isActive])
+  @@index([userId, resource])
+}
+
+model UserSession {
+  id           String    @id @default(cuid())
+  userId       String
+  sessionId    String    @unique
+  ipAddress    String
+  userAgent    String?
+  loginTime    DateTime  @default(now())
+  lastActivity DateTime  @default(now())
+  expiresAt    DateTime
+  isActive     Boolean   @default(true)
+  logoutTime   DateTime?
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([sessionId])
+  @@index([isActive])
+  @@index([expiresAt])
+  @@index([userId, isActive])
+}
+
+model EditorialBoardItem {
+  id               Int             @id @default(autoincrement())
+  name             String
+  title            String?
+  company          String?
+  email            String?
+  phone            String?
+  addedDate        DateTime        @default(now())
+  lastUpdated      DateTime        @default(now())
+  bdrId            String
+  status           EditorialStatus @default(LIST_OUT_QA_INTERVIEW_PROPOSED)
+  notes            String?
+  link             String?
+  interviewDate    DateTime?
+  qaSubmissionDate DateTime?
+  qaApprovedDate   DateTime?
+  publicationDate  DateTime?
+  publicationLink  String?
+  leadId           Int?
+  pipelineItemId   Int?
+  activityLogs     ActivityLog[]
+  bdr              User            @relation(fields: [bdrId], references: [id])
+  lead             Lead?           @relation(fields: [leadId], references: [id])
+  pipelineItem     PipelineItem?   @relation(fields: [pipelineItemId], references: [id])
+
+  @@index([status])
+  @@index([addedDate])
+  @@index([lastUpdated])
+  @@index([bdrId])
+  @@index([leadId])
+  @@index([pipelineItemId])
+  @@index([bdrId, status])
+  @@index([status, lastUpdated])
 }
 
 enum Role {
   ADMIN
   BDR
+  TEAM_LEAD
+  MANAGER
+  DIRECTOR
+}
+
+enum Resource {
+  LEADS
+  PIPELINE
+  FINANCE
+  USERS
+  REPORTS
+  SETTINGS
+  ACTIVITY_LOGS
+  DUPLICATES
+}
+
+enum Action {
+  CREATE
+  READ
+  UPDATE
+  DELETE
+  EXPORT
+  MANAGE
+  VIEW_ALL
+  VIEW_TEAM
+}
+
+enum EditorialStatus {
+  LIST_OUT_QA_INTERVIEW_PROPOSED
+  INTERVIEW_SCHEDULED
+  INTERVIEW_COMPLETED
+  QA_SUBMITTED
+  QA_APPROVED
+  PUBLISHED
+  DECLINED
+}
+
+// Duplicate Prevention Models
+
+model DuplicateWarning {
+  id                String              @id @default(cuid())
+  triggeredByUserId String
+  triggerAction     DuplicateAction
+  warningType       DuplicateType
+  severity          WarningSeverity     @default(MEDIUM)
+  
+  // What triggered the warning
+  triggerData       Json                // Contains the data being added (lead/contact/company info)
+  
+  // Potential duplicates found
+  potentialDuplicates DuplicateMatch[]
+  
+  // User decision
+  userDecision      UserDecision?
+  decisionMade      Boolean             @default(false)
+  decisionAt        DateTime?
+  proceedReason     String?
+  
+  // System tracking
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  
+  // Relationships
+  triggeredBy       User                @relation(fields: [triggeredByUserId], references: [id], onDelete: Cascade)
+  auditLogs         DuplicateAuditLog[] @relation("DuplicateAuditLogs")
+  
+  @@index([triggeredByUserId])
+  @@index([createdAt])
+  @@index([warningType])
+  @@index([severity])
+  @@index([decisionMade])
+  @@index([triggerAction])
+}
+
+model DuplicateMatch {
+  id               String           @id @default(cuid())
+  warningId        String
+  matchType        DuplicateType
+  confidence       Float            // 0.0 to 1.0 confidence score
+  matchDetails     Json             // Details about what matched
+  
+  // What was matched against
+  existingLeadId      Int?
+  existingPipelineId  Int?
+  existingCompany     String?
+  existingContactInfo Json?           // Email, phone, name, etc.
+  
+  // Who owns the existing record
+  ownedByUserId       String?
+  lastContactDate     DateTime?
+  recordStatus        String?
+  
+  createdAt        DateTime         @default(now())
+  
+  // Relationships
+  warning          DuplicateWarning @relation(fields: [warningId], references: [id], onDelete: Cascade)
+  existingLead     Lead?            @relation(fields: [existingLeadId], references: [id])
+  existingPipeline PipelineItem?    @relation(fields: [existingPipelineId], references: [id])
+  ownedBy          User?            @relation(fields: [ownedByUserId], references: [id])
+  
+  @@index([warningId])
+  @@index([matchType])
+  @@index([confidence])
+  @@index([ownedByUserId])
+  @@index([lastContactDate])
+}
+
+model CompanyRegistry {
+  id                String            @id @default(cuid())
+  companyName       String
+  normalizedName    String            // Normalized for matching
+  domain            String?
+  aliases           String[]          // Alternative names/spellings
+  
+  // Contact information
+  primaryEmail      String?
+  primaryPhone      String?
+  website           String?
+  linkedinUrl       String?
+  
+  // Tracking
+  firstSeenAt       DateTime          @default(now())
+  lastContactedAt   DateTime?
+  totalContacts     Int               @default(0)
+  activeDeals       Int               @default(0)
+  
+  // Territory and ownership tracking
+  primaryTerritoryId String?
+  primaryTerritory   Territory?       @relation(fields: [primaryTerritoryId], references: [id])
+  
+  // Relationships
+  contacts          ContactRegistry[]
+  
+  @@unique([normalizedName])
+  @@index([companyName])
+  @@index([normalizedName])
+  @@index([domain])
+  @@index([lastContactedAt])
+  @@index([primaryTerritoryId])
+}
+
+model ContactRegistry {
+  id              String           @id @default(cuid())
+  fullName        String
+  normalizedName  String           // Normalized for matching
+  firstName       String?
+  lastName        String?
+  
+  // Contact details
+  email           String?
+  normalizedEmail String?          // Normalized email for matching
+  phone           String?
+  normalizedPhone String?          // Normalized phone for matching
+  title           String?
+  linkedinUrl     String?
+  
+  // Company association
+  companyId       String?
+  company         CompanyRegistry? @relation(fields: [companyId], references: [id])
+  
+  // Tracking
+  firstSeenAt     DateTime         @default(now())
+  lastContactedAt DateTime?
+  contactCount    Int              @default(0)
+  
+  // Territory tracking
+  primaryTerritoryId String?
+  primaryTerritory   Territory?    @relation(fields: [primaryTerritoryId], references: [id])
+  
+  @@unique([normalizedEmail])
+  @@index([fullName])
+  @@index([normalizedName])
+  @@index([normalizedEmail])
+  @@index([normalizedPhone])
+  @@index([companyId])
+  @@index([lastContactedAt])
+  @@index([primaryTerritoryId])
+}
+
+model DuplicateAuditLog {
+  id              String           @id @default(cuid())
+  userId          String
+  action          String           // 'warning_shown', 'proceeded_anyway', 'cancelled', 'admin_viewed'
+  warningId       String?
+  
+  // Context
+  entityType      String           // 'lead', 'pipeline', 'company', 'contact'
+  entityId        String?
+  
+  // Decision context
+  decisionReason  String?
+  systemSuggestion String?
+  actualOutcome   String?          // Follow-up: was it actually a duplicate?
+  
+  // Metadata
+  ipAddress       String?
+  userAgent       String?
+  timestamp       DateTime         @default(now())
+  
+  // Relationships
+  user            User             @relation("DuplicateAudits", fields: [userId], references: [id])
+  warning         DuplicateWarning? @relation("DuplicateAuditLogs", fields: [warningId], references: [id])
+  
+  @@index([userId])
+  @@index([action])
+  @@index([timestamp])
+  @@index([warningId])
+  @@index([entityType])
+}
+
+// Enums for duplicate system
+
+enum DuplicateAction {
+  LEAD_CREATE
+  LEAD_UPDATE
+  PIPELINE_CREATE
+  PIPELINE_UPDATE
+  CONTACT_ADD
+  COMPANY_ADD
+}
+
+enum DuplicateType {
+  COMPANY_NAME
+  COMPANY_DOMAIN
+  CONTACT_EMAIL
+  CONTACT_PHONE
+  CONTACT_NAME
+  LINKEDIN_PROFILE
+  RECENT_ACTIVITY
+  ACTIVE_DEAL
+}
+
+enum WarningSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum UserDecision {
+  PROCEEDED
+  CANCELLED
+  IGNORED
 }

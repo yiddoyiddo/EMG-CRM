@@ -19,8 +19,9 @@ const fetchBdrPerformance = async (bdr: string, startDate: string, endDate: stri
   return response.json();
 };
 
-export default function BdrPerformanceReport({ params }: { params: Promise<{ bdr: string }> }) {
-  const { bdr } = use(params);
+// Next.js App Router passes params synchronously; do not use Promise/use() here
+export default function BdrPerformanceReport({ params }: { params: { bdr: string } }) {
+  const { bdr } = params;
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 

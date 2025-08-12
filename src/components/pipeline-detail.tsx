@@ -178,7 +178,7 @@ export function PipelineDetail({ pipelineItemId, open, onOpenChange }: PipelineD
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl max-h=[90vh] overflow-y-auto bg-white/70 dark:bg-white/[0.06] backdrop-blur-xl border border-white/20 dark:border-white/10">
         <DialogHeader>
           <DialogTitle className="text-xl flex items-center justify-between">
             <span>{editMode ? 'Edit ' : ''}{pipelineItem.name}</span>

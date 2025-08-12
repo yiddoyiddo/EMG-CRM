@@ -225,6 +225,8 @@ export function LeadsTableRefactored<TData, TValue>({
         exportButton={exportButton}
         additionalActions={additionalActions}
         emptyStateMessage="No leads found"
+        virtualizeRows
+        virtualRowEstimatedHeight={44}
       />
 
       <BulkPipelineDialog

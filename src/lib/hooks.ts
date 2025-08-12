@@ -1,6 +1,6 @@
 'use client';
 
-import { useQuery, useMutation, useQueryClient, UseQueryOptions } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, UseQueryOptions, keepPreviousData } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { 
   leadFilterSchema, 
@@ -503,6 +503,7 @@ export function useLeads(filters: LeadFilter, options?: UseQueryOptions<LeadsRes
   return useQuery({
     queryKey,
     queryFn: () => fetchLeads(filters),
+    placeholderData: keepPreviousData,
     ...options,
   });
 }
@@ -582,6 +583,7 @@ export function usePipelineItems(filters: PipelineFilter, options?: UseQueryOpti
   return useQuery({
     queryKey: ['pipeline', filters],
     queryFn: () => fetchPipelineItems(filters),
+    placeholderData: keepPreviousData,
     ...options,
   });
 }

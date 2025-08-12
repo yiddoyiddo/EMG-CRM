@@ -1,26 +1,40 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/db";
 import { createPipelineItemSchema, pipelineFilterSchema } from "@/lib/validations";
-import { Role } from "@prisma/client";
+import { Resource, Action, DuplicateAction } from "@prisma/client";
+import { getAuthenticatedUser, createErrorResponse, createSuccessResponse } from "@/lib/auth-api";
+import { hasPermission, getDataAccessFilter } from "@/lib/permissions";
+import { duplicateDetectionService } from "@/lib/duplicate-detection";
 
 export async function GET(req: NextRequest) {
   try {
-    console.log('🔍 Pipeline API called');
+    // Reduced noisy logging in production
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('🔍 Pipeline API called');
+    }
     
-    // 1. Get Session securely on the server
-    const session = await getServerSession(authOptions);
-    console.log('📋 Session:', session ? `User: ${session.user?.email}, Role: ${session.user?.role}` : 'NO SESSION');
-
-    // 2. Check Authentication
-    if (!session || !session.user) {
-      console.log('❌ No session - returning 401');
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // Get authenticated user with permissions
+    const user = await getAuthenticatedUser(req);
+    if (!user) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('❌ No authenticated user - returning 401');
+      }
+      return createErrorResponse("Unauthorized", 401);
     }
 
-    const { role, id: userId, name: userName } = session.user;
-    console.log(`👤 User: ${userId}, Role: ${role}, Name: ${userName}`);
+    // Check read permission
+    if (!hasPermission(user, Resource.PIPELINE, Action.READ)) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('❌ No read permission - returning 403');
+      }
+      return createErrorResponse("Forbidden", 403);
+    }
+
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`👤 User: ${user.id}, Role: ${user.role}, Name: ${user.name}`);
+    }
 
     const { searchParams } = new URL(req.url);
     const search = searchParams.get('search') || undefined;
@@ -42,29 +56,22 @@ export async function GET(req: NextRequest) {
       pageSize,
     });
     
-    // 3. Enforce Authorization (RBAC) - Build where clause with role-based filtering
-    const where: any = {};
-    
-    // Role-based data filtering
-    if (role === Role.BDR) {
-      // BDRs can only see their own pipeline items
-      where.bdr = userName; // Use the user's name as the BDR filter
-      console.log(`🔒 BDR filter applied: bdr = ${userName}`);
-    } else if (role === Role.ADMIN) {
-      // Admins can see all pipeline items - no additional filtering
-      console.log('🔓 ADMIN - No bdr filter applied');
-    } else {
-      // Unknown role - deny access
-      console.log(`❌ Unknown role: ${role}`);
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    // Build where clause with permission-based filtering
+    let where: any = getDataAccessFilter(user, Resource.PIPELINE);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`🔒 Permission-based filter applied:`, where);
     }
     
     if (parsedParams.search) {
-      where.OR = [
-        { name: { contains: parsedParams.search, mode: 'insensitive' } },
-        { company: { contains: parsedParams.search, mode: 'insensitive' } },
-        { email: { contains: parsedParams.search, mode: 'insensitive' } },
-      ];
+      const searchFilter = {
+        OR: [
+          { name: { contains: parsedParams.search, mode: 'insensitive' } },
+          { company: { contains: parsedParams.search, mode: 'insensitive' } },
+          { email: { contains: parsedParams.search, mode: 'insensitive' } },
+        ]
+      };
+      
+      where = where.OR ? { AND: [where, searchFilter] } : { ...where, ...searchFilter };
     }
     
     if (parsedParams.category) {
@@ -75,12 +82,24 @@ export async function GET(req: NextRequest) {
       where.status = parsedParams.status;
     }
     
-    // Note: For BDRs, we ignore the 'bdr' filter param since they can only see their own data
-    // For Admins, we can still apply the bdr filter if provided
-    if (parsedParams.bdr && role === Role.ADMIN) {
-      console.log(`🔍 Admin requested BDR filter: "${parsedParams.bdr}"`);
-      where.bdr = parsedParams.bdr;
-      console.log(`✅ BDR filter applied: ${parsedParams.bdr}`);
+    // Apply BDR filter for users with appropriate permissions
+    if (parsedParams.bdr && (hasPermission(user, Resource.PIPELINE, Action.VIEW_ALL) || hasPermission(user, Resource.PIPELINE, Action.VIEW_TEAM))) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`🔍 User requested BDR filter: "${parsedParams.bdr}"`);
+      }
+      const targetUser = await prisma.user.findFirst({ where: { name: parsedParams.bdr }, select: { id: true } });
+      if (targetUser) {
+        where.bdrId = targetUser.id;
+        if (process.env.NODE_ENV !== 'production') {
+          console.log(`✅ BDR filter applied by id: ${targetUser.id}`);
+        }
+      } else {
+        // Force no results if name doesn't exist
+        where.bdrId = '___NO_MATCH___';
+        if (process.env.NODE_ENV !== 'production') {
+          console.warn(`⚠️ BDR name not found: ${parsedParams.bdr}`);
+        }
+      }
     }
     
     // Add filter for top-level items only (not children of sublists)
@@ -89,11 +108,15 @@ export async function GET(req: NextRequest) {
       parentId: null
     };
     
-    console.log('📋 Final WHERE clause:', JSON.stringify(whereWithParent, null, 2));
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('📋 Final WHERE clause:', JSON.stringify(whereWithParent, null, 2));
+    }
 
     // Get total count for pagination (only top-level items)
     const total = await prisma.pipelineItem.count({ where: whereWithParent });
-    console.log(`📊 Total items found: ${total}`);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`📊 Total items found: ${total}`);
+    }
     
     // Get pipeline items with optimized query using select
     const items = await prisma.pipelineItem.findMany({
@@ -105,7 +128,11 @@ export async function GET(req: NextRequest) {
         id: true,
         name: true,
         title: true,
-        bdr: true, // This is now a string field
+        bdr: {
+          select: {
+            name: true,
+          }
+        },
         company: true,
         category: true,
         status: true,
@@ -136,7 +163,11 @@ export async function GET(req: NextRequest) {
             id: true,
             name: true,
             title: true,
-            bdr: true, // This is now a string field
+            bdr: {
+              select: {
+                name: true,
+              }
+            },
             company: true,
             category: true,
             status: true,
@@ -176,7 +207,11 @@ export async function GET(req: NextRequest) {
               select: {
                 id: true,
                 timestamp: true,
-                bdr: true, // This is now a string field
+                bdr: {
+                  select: {
+                    name: true,
+                  }
+                },
                 activityType: true,
                 description: true,
                 notes: true,
@@ -199,7 +234,11 @@ export async function GET(req: NextRequest) {
           select: {
             id: true,
             timestamp: true,
-            bdr: true, // This is now a string field
+            bdr: {
+              select: {
+                name: true,
+              }
+            },
             activityType: true,
             description: true,
             notes: true,
@@ -209,28 +248,55 @@ export async function GET(req: NextRequest) {
     });
     
     // Transform the data to include latest activity log information and nested children
-    const transformedItems = items.map((item: any) => ({
-      ...item,
-      latestActivityLog: item.activityLogs[0] || null,
-      children: item.children?.map((child: any) => ({
-        ...child,
-        latestActivityLog: child.activityLogs[0] || null,
-        activityLogs: undefined
-      })) || [],
-      activityLogs: undefined // Remove the full activityLogs array to keep response clean
-    }));
+    const transformedItems = items.map((item: any) => {
+      const latest = item.activityLogs[0] || null;
+      return {
+        ...item,
+        bdr: item.bdr?.name || '',
+        latestActivityLog: latest
+          ? {
+              ...latest,
+              bdr: latest.bdr?.name || ''
+            }
+          : null,
+        children:
+          item.children?.map((child: any) => {
+            const childLatest = child.activityLogs[0] || null;
+            return {
+              ...child,
+              bdr: child.bdr?.name || '',
+              latestActivityLog: childLatest
+                ? {
+                    ...childLatest,
+                    bdr: childLatest.bdr?.name || ''
+                  }
+                : null,
+              activityLogs: undefined,
+            };
+          }) || [],
+        activityLogs: undefined, // Remove the full activityLogs array to keep response clean
+      };
+    });
     
     // Calculate total pages
     const totalPages = Math.ceil(total / parsedParams.pageSize);
     
-    console.log(`📤 Returning ${transformedItems.length} items to frontend`);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`📤 Returning ${transformedItems.length} items to frontend`);
+    }
     
-    return NextResponse.json({
+    return new NextResponse(JSON.stringify({
       items: transformedItems,
       total,
       page: parsedParams.page,
       pageSize: parsedParams.pageSize,
       totalPages,
+    }), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'private, max-age=30, stale-while-revalidate=60',
+      },
     });
   } catch (error: any) {
     console.error("Error fetching pipeline items:", error);
@@ -243,70 +309,106 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    // 1. Get Session securely on the server
-    const session = await getServerSession(authOptions);
-
-    // 2. Check Authentication
-    if (!session || !session.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // Get authenticated user with permissions
+    const user = await getAuthenticatedUser(req);
+    if (!user) {
+      return createErrorResponse("Unauthorized", 401);
     }
 
-    const { role, id: userId, name: userName } = session.user;
+    // Check create permission
+    if (!hasPermission(user, Resource.PIPELINE, Action.CREATE)) {
+      return createErrorResponse("Forbidden", 403);
+    }
+
     const data = await req.json();
     
     // Validate the request body
     const validatedData = createPipelineItemSchema.parse(data);
     
-    // 3. Enforce Authorization (RBAC) for pipeline item creation
-    let pipelineData = { ...validatedData };
+    // Determine BDR assignment based on permissions first
+    let bdrId = user.id; // Default to current user
     
-    if (role === Role.BDR) {
-      // BDRs can only create pipeline items assigned to themselves
-      pipelineData.bdr = userName; // Use the user's name as the BDR
-    } else if (role === Role.ADMIN) {
-      // Admins can assign pipeline items to any BDR
-      // Use the provided bdr or assign to themselves if not provided
-      if (!pipelineData.bdr) {
-        pipelineData.bdr = userName;
+    // Handle BDR assignment from form data (name to ID conversion)
+    if (validatedData.bdr && hasPermission(user, Resource.PIPELINE, Action.VIEW_ALL)) {
+      // Users with VIEW_ALL permission can assign to any BDR by name
+      const targetBdr = await prisma.user.findFirst({
+        where: { name: validatedData.bdr },
+        select: { id: true }
+      });
+      if (targetBdr) {
+        bdrId = targetBdr.id;
       }
-    } else {
-      // Unknown role - deny access
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    } else if (validatedData.bdrId && hasPermission(user, Resource.PIPELINE, Action.VIEW_ALL)) {
+      // Users with VIEW_ALL permission can assign to any BDR by ID
+      bdrId = validatedData.bdrId;
+    }
+    
+    // Check if force parameter is passed to skip duplicate detection
+    const { searchParams } = new URL(req.url);
+    const force = searchParams.get('force') === 'true';
+    
+    // Non-blocking duplicate awareness: if similar item exists in another BDR's pipeline,
+    // record a duplicate warning for reporting/notifications but do not block creation.
+    if (!force && validatedData.name && validatedData.company) {
+      const existingDuplicate = await prisma.pipelineItem.findFirst({
+        where: {
+          name: { equals: validatedData.name, mode: 'insensitive' },
+          company: { equals: validatedData.company, mode: 'insensitive' },
+          bdrId: { not: bdrId },
+        },
+        select: { id: true }
+      });
+      if (existingDuplicate) {
+        // Fire-and-forget duplicate warning creation
+        duplicateDetectionService
+          .checkForDuplicates(
+            { name: validatedData.name, company: validatedData.company, email: validatedData.email, phone: validatedData.phone, title: validatedData.title, linkedinUrl: validatedData.link },
+            user.id,
+            DuplicateAction.PIPELINE_CREATE
+          )
+          .catch(() => {});
+      }
     }
     
     // Create the pipeline item
     const pipelineItem = await prisma.pipelineItem.create({
       data: {
-        name: pipelineData.name,
-        title: pipelineData.title,
-        bdr: pipelineData.bdr, // This is now a string field
-        company: pipelineData.company,
-        category: pipelineData.category,
-        status: pipelineData.status,
-        value: pipelineData.value,
-        probability: pipelineData.probability,
-        expectedCloseDate: pipelineData.expectedCloseDate,
-        callDate: pipelineData.callDate,
+        name: validatedData.name,
+        title: validatedData.title,
+        bdrId: bdrId,
+        company: validatedData.company,
+        category: validatedData.category,
+        status: validatedData.status,
+        value: validatedData.value,
+        probability: validatedData.probability,
+        expectedCloseDate: validatedData.expectedCloseDate,
+        callDate: validatedData.callDate,
         lastUpdated: new Date(),
-        link: pipelineData.link,
-        phone: pipelineData.phone,
-        notes: pipelineData.notes,
-        email: pipelineData.email,
-        leadId: pipelineData.leadId,
+        link: validatedData.link,
+        phone: validatedData.phone,
+        notes: validatedData.notes,
+        email: validatedData.email,
+        leadId: validatedData.leadId,
         // Initialize sublist fields
-        parentId: pipelineData.parentId || null,
-        isSublist: pipelineData.isSublist || false,
-        sublistName: pipelineData.sublistName || null,
-        sortOrder: pipelineData.sortOrder || null,
+        parentId: validatedData.parentId || null,
+        isSublist: validatedData.isSublist || false,
+        sublistName: validatedData.sublistName || null,
+        sortOrder: validatedData.sortOrder || null,
+      },
+      include: {
+        bdr: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          }
+        }
       }
     });
     
-    return NextResponse.json(pipelineItem, { status: 201 });
+    return createSuccessResponse(pipelineItem, 201);
   } catch (error: any) {
     console.error("Error creating pipeline item:", error);
-    return NextResponse.json(
-      { error: error.message || "Failed to create pipeline item" },
-      { status: 400 }
-    );
+    return createErrorResponse(error.message || "Failed to create pipeline item", 400);
   }
 } 
