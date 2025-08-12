@@ -397,6 +397,11 @@ export async function GET(request: Request) {
           activityType: true,
           timestamp: true,
           pipelineItemId: true,
+          // Include status transition fields so call completion detection works
+          previousStatus: true,
+          newStatus: true,
+          previousCategory: true,
+          newCategory: true,
           notes: true,
         },
         orderBy: { timestamp: 'desc' },

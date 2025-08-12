@@ -8,6 +8,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { UserNav } from "@/components/user-nav";
 import { Providers } from "@/components/providers";
 import { ContextAwareNav } from "@/components/context-aware-nav";
+import { RealTimeNotifications } from "@/components/real-time-notifications";
 
 export default function RootLayout({
   children,
@@ -44,6 +45,7 @@ export default function RootLayout({
                   <div className="flex h-14 items-center justify-between px-4">
                     <div className="flex items-center gap-4">
                       <ThemeToggle />
+                      <RealTimeNotifications showAlertBanner={false} />
                       <UserNav />
                     </div>
                   </div>
@@ -56,6 +58,7 @@ export default function RootLayout({
                       <div className="flex h-14 items-center justify-end px-6">
                         <div className="flex items-center gap-4">
                           <ThemeToggle />
+                          <RealTimeNotifications showAlertBanner={false} />
                           <UserNav />
                         </div>
                       </div>

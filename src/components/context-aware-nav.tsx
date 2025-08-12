@@ -300,7 +300,8 @@ export function ContextAwareNav() {
               </div>
               <div className="ml-auto flex items-center gap-2">
                 <ChatDesktopNotifications userId={session.user.id} />
-                <RealTimeNotifications userId={session.user.id} autoRefresh refreshInterval={30000} />
+                {/* Hide alert banner in compact sidebar footer to prevent layout overlap */}
+                <RealTimeNotifications userId={session.user.id} autoRefresh refreshInterval={30000} showAlertBanner={false} />
               </div>
             </div>
           </div>

@@ -122,16 +122,25 @@ export function calculateKPIForPeriod(
   activityLogs: any[]
 ): KPIMetric {
   let count: number;
-  
+
   if (activityType === 'Call_Completed') {
     // Use enhanced call completion logic
     const callCompletions = getAllCallCompletions(pipelineItems, activityLogs, startDate, endDate);
     count = callCompletions.length;
+  } else if (activityType === 'Agreement_Sent') {
+    // Prefer pipeline agreementDate if present, fallback to activity logs
+    const pipelineCount = pipelineItems.filter((item) => item.agreementDate && item.agreementDate >= startDate && item.agreementDate <= endDate).length;
+    const logCount = activityLogs.filter((log) => log.activityType === 'Agreement_Sent' && log.timestamp >= startDate && log.timestamp <= endDate).length;
+    count = Math.max(pipelineCount, logCount);
+  } else if (activityType === 'Partner_List_Sent') {
+    // Prefer pipeline partnerListSentDate if present, fallback to activity logs
+    const pipelineCount = pipelineItems.filter((item) => item.partnerListSentDate && item.partnerListSentDate >= startDate && item.partnerListSentDate <= endDate).length;
+    const logCount = activityLogs.filter((log) => log.activityType === 'Partner_List_Sent' && log.timestamp >= startDate && log.timestamp <= endDate).length;
+    count = Math.max(pipelineCount, logCount);
   } else {
     // Use existing logic for other activity types
-    count = activityLogs.filter(log => 
-      log.activityType === activityType && 
-      log.timestamp >= startDate && log.timestamp <= endDate
+    count = activityLogs.filter(
+      (log) => log.activityType === activityType && log.timestamp >= startDate && log.timestamp <= endDate
     ).length;
   }
   

@@ -1,414 +1,174 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth-options";
-import { prisma } from "@/lib/db";
-import { createPipelineItemSchema, pipelineFilterSchema } from "@/lib/validations";
-import { Resource, Action, DuplicateAction } from "@prisma/client";
-import { getAuthenticatedUser, createErrorResponse, createSuccessResponse } from "@/lib/auth-api";
-import { hasPermission, getDataAccessFilter } from "@/lib/permissions";
-import { duplicateDetectionService } from "@/lib/duplicate-detection";
+import { NextRequest, NextResponse } from 'next/server';
+import { PrismaClient, Resource, Action } from '@prisma/client';
+import { createSublistSchema } from '@/lib/validations';
+import { SecurityService, withSecurity } from '@/lib/security';
 
+const prisma = new PrismaClient();
+
+// GET - List pipeline items with filters (read-only)
 export async function GET(req: NextRequest) {
-  try {
-    // Reduced noisy logging in production
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('🔍 Pipeline API called');
-    }
-    
-    // Get authenticated user with permissions
-    const user = await getAuthenticatedUser(req);
-    if (!user) {
-      if (process.env.NODE_ENV !== 'production') {
-        console.log('❌ No authenticated user - returning 401');
-      }
-      return createErrorResponse("Unauthorized", 401);
-    }
-
-    // Check read permission
-    if (!hasPermission(user, Resource.PIPELINE, Action.READ)) {
-      if (process.env.NODE_ENV !== 'production') {
-        console.log('❌ No read permission - returning 403');
-      }
-      return createErrorResponse("Forbidden", 403);
-    }
-
-    if (process.env.NODE_ENV !== 'production') {
-      console.log(`👤 User: ${user.id}, Role: ${user.role}, Name: ${user.name}`);
-    }
-
+  return withSecurity(Resource.PIPELINE, Action.READ, async (context) => {
     const { searchParams } = new URL(req.url);
-    const search = searchParams.get('search') || undefined;
+    const search = (searchParams.get('search') || '').trim();
     const category = searchParams.get('category') || undefined;
     const status = searchParams.get('status') || undefined;
     const bdr = searchParams.get('bdr') || undefined;
-    const page = parseInt(searchParams.get('page') || '1');
-    const pageSize = parseInt(searchParams.get('pageSize') || '50');
-    
+    const page = parseInt(searchParams.get('page') || '1', 10);
+    const pageSize = parseInt(searchParams.get('pageSize') || '50', 10);
     const skip = (page - 1) * pageSize;
-    
-    // Parse and validate the query parameters
-    const parsedParams = pipelineFilterSchema.parse({
-      search,
-      category,
-      status,
-      bdr,
-      page,
-      pageSize,
-    });
-    
-    // Build where clause with permission-based filtering
-    let where: any = getDataAccessFilter(user, Resource.PIPELINE);
-    if (process.env.NODE_ENV !== 'production') {
-      console.log(`🔒 Permission-based filter applied:`, where);
+
+    const where: any = {};
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { company: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
+      ];
     }
-    
-    if (parsedParams.search) {
-      const searchFilter = {
-        OR: [
-          { name: { contains: parsedParams.search, mode: 'insensitive' } },
-          { company: { contains: parsedParams.search, mode: 'insensitive' } },
-          { email: { contains: parsedParams.search, mode: 'insensitive' } },
-        ]
-      };
-      
-      where = where.OR ? { AND: [where, searchFilter] } : { ...where, ...searchFilter };
-    }
-    
-    if (parsedParams.category) {
-      where.category = parsedParams.category;
-    }
-    
-    if (parsedParams.status) {
-      where.status = parsedParams.status;
-    }
-    
-    // Apply BDR filter for users with appropriate permissions
-    if (parsedParams.bdr && (hasPermission(user, Resource.PIPELINE, Action.VIEW_ALL) || hasPermission(user, Resource.PIPELINE, Action.VIEW_TEAM))) {
-      if (process.env.NODE_ENV !== 'production') {
-        console.log(`🔍 User requested BDR filter: "${parsedParams.bdr}"`);
-      }
-      const targetUser = await prisma.user.findFirst({ where: { name: parsedParams.bdr }, select: { id: true } });
-      if (targetUser) {
-        where.bdrId = targetUser.id;
-        if (process.env.NODE_ENV !== 'production') {
-          console.log(`✅ BDR filter applied by id: ${targetUser.id}`);
-        }
-      } else {
-        // Force no results if name doesn't exist
-        where.bdrId = '___NO_MATCH___';
-        if (process.env.NODE_ENV !== 'production') {
-          console.warn(`⚠️ BDR name not found: ${parsedParams.bdr}`);
-        }
-      }
-    }
-    
-    // Add filter for top-level items only (not children of sublists)
-    const whereWithParent = {
-      ...where,
-      parentId: null
-    };
-    
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('📋 Final WHERE clause:', JSON.stringify(whereWithParent, null, 2));
+    if (category) where.category = category;
+    if (status) where.status = status;
+
+    if (bdr) {
+      const targetUser = await prisma.user.findFirst({ where: { name: bdr }, select: { id: true } });
+      where.bdrId = targetUser ? targetUser.id : '___NO_MATCH___';
     }
 
-    // Get total count for pagination (only top-level items)
-    const total = await prisma.pipelineItem.count({ where: whereWithParent });
-    if (process.env.NODE_ENV !== 'production') {
-      console.log(`📊 Total items found: ${total}`);
-    }
-    
-    // Get pipeline items with optimized query using select
-    const items = await prisma.pipelineItem.findMany({
-      where: whereWithParent,
+    const baseQuery: any = {
+      where,
       skip,
-      take: parsedParams.pageSize,
+      take: pageSize,
       orderBy: { lastUpdated: 'desc' },
-      select: {
-        id: true,
-        name: true,
-        title: true,
-        bdr: {
-          select: {
-            name: true,
-          }
-        },
-        company: true,
-        category: true,
-        status: true,
-        value: true,
-        probability: true,
-        expectedCloseDate: true,
-        callDate: true,
-        link: true,
-        phone: true,
-        notes: true,
-        email: true,
-        leadId: true,
-        addedDate: true,
-        lastUpdated: true,
-        isSublist: true,
-        parentId: true,
-        sublistName: true,
-        sortOrder: true,
-        agreementDate: true,
-        partnerListDueDate: true,
-        partnerListSentDate: true,
-        firstSaleDate: true,
-        partnerListSize: true,
-        totalSalesFromList: true,
+      include: {
+        bdr: { select: { name: true, territoryId: true } },
         children: {
           orderBy: { sortOrder: 'asc' },
-          select: {
-            id: true,
-            name: true,
-            title: true,
-            bdr: {
-              select: {
-                name: true,
-              }
-            },
-            company: true,
-            category: true,
-            status: true,
-            value: true,
-            probability: true,
-            expectedCloseDate: true,
-            callDate: true,
-            link: true,
-            phone: true,
-            notes: true,
-            email: true,
-            leadId: true,
-            addedDate: true,
-            lastUpdated: true,
-            isSublist: true,
-            parentId: true,
-            sublistName: true,
-            sortOrder: true,
-            agreementDate: true,
-            partnerListDueDate: true,
-            partnerListSentDate: true,
-            firstSaleDate: true,
-            partnerListSize: true,
-            totalSalesFromList: true,
-            activityLogs: {
-              orderBy: { timestamp: 'desc' },
-              take: 1,
-              where: {
-                OR: [
-                  { activityType: 'BDR_Update' },
-                  { activityType: 'Note_Added' },
-                  { activityType: 'Status_Change' },
-                  { activityType: 'Pipeline_Move' },
-                  { activityType: 'Deal_Closed' }
-                ]
-              },
-              select: {
-                id: true,
-                timestamp: true,
-                bdr: {
-                  select: {
-                    name: true,
-                  }
-                },
-                activityType: true,
-                description: true,
-                notes: true,
-              }
-            }
-          }
+          include: { bdr: { select: { name: true, territoryId: true } } },
         },
-        activityLogs: {
-          orderBy: { timestamp: 'desc' },
-          take: 1,
-          where: {
-            OR: [
-              { activityType: 'BDR_Update' },
-              { activityType: 'Note_Added' },
-              { activityType: 'Status_Change' },
-              { activityType: 'Pipeline_Move' },
-              { activityType: 'Deal_Closed' }
-            ]
-          },
-          select: {
-            id: true,
-            timestamp: true,
-            bdr: {
-              select: {
-                name: true,
-              }
-            },
-            activityType: true,
-            description: true,
-            notes: true,
-          }
-        }
-      }
-    });
-    
-    // Transform the data to include latest activity log information and nested children
-    const transformedItems = items.map((item: any) => {
-      const latest = item.activityLogs[0] || null;
-      return {
-        ...item,
-        bdr: item.bdr?.name || '',
-        latestActivityLog: latest
-          ? {
-              ...latest,
-              bdr: latest.bdr?.name || ''
-            }
-          : null,
-        children:
-          item.children?.map((child: any) => {
-            const childLatest = child.activityLogs[0] || null;
-            return {
-              ...child,
-              bdr: child.bdr?.name || '',
-              latestActivityLog: childLatest
-                ? {
-                    ...childLatest,
-                    bdr: childLatest.bdr?.name || ''
-                  }
-                : null,
-              activityLogs: undefined,
-            };
-          }) || [],
-        activityLogs: undefined, // Remove the full activityLogs array to keep response clean
-      };
-    });
-    
-    // Calculate total pages
-    const totalPages = Math.ceil(total / parsedParams.pageSize);
-    
-    if (process.env.NODE_ENV !== 'production') {
-      console.log(`📤 Returning ${transformedItems.length} items to frontend`);
-    }
-    
-    return new NextResponse(JSON.stringify({
-      items: transformedItems,
-      total,
-      page: parsedParams.page,
-      pageSize: parsedParams.pageSize,
-      totalPages,
-    }), {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'private, max-age=30, stale-while-revalidate=60',
       },
+    };
+
+    const secureQuery = SecurityService.buildSecureQuery(baseQuery, context, Resource.PIPELINE);
+    const countQuery = SecurityService.buildSecureQuery({ where }, context, Resource.PIPELINE);
+
+    const [itemsRaw, total] = await Promise.all([
+      prisma.pipelineItem.findMany(secureQuery),
+      prisma.pipelineItem.count(countQuery),
+    ]);
+
+    const mapItem = (item: any): any => ({
+      id: item.id,
+      name: item.name,
+      title: item.title,
+      addedDate: item.addedDate,
+      lastUpdated: item.lastUpdated,
+      bdr: item.bdr?.name || null,
+      company: item.company,
+      category: item.category,
+      status: item.status,
+      value: item.value,
+      probability: item.probability,
+      expectedCloseDate: item.expectedCloseDate,
+      callDate: item.callDate,
+      link: item.link,
+      phone: item.phone,
+      notes: item.notes,
+      email: item.email,
+      leadId: item.leadId,
+      parentId: item.parentId,
+      isSublist: item.isSublist,
+      sublistName: item.sublistName,
+      sortOrder: item.sortOrder,
+      partnerListSize: item.partnerListSize,
+      partnerListSentDate: item.partnerListSentDate,
+      firstSaleDate: item.firstSaleDate,
+      totalSalesFromList: item.totalSalesFromList,
+      children: Array.isArray(item.children) ? item.children.map(mapItem) : [],
     });
-  } catch (error: any) {
-    console.error("Error fetching pipeline items:", error);
-    return NextResponse.json(
-      { error: error.message || "Failed to fetch pipeline items" },
-      { status: 500 }
+
+    const items = itemsRaw.map(mapItem);
+    const totalPages = Math.ceil(total / pageSize);
+
+    return new NextResponse(
+      JSON.stringify({ items, total, page, pageSize, totalPages }),
+      {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'private, max-age=15, stale-while-revalidate=30',
+        },
+      }
     );
-  }
+  }, req);
 }
 
-export async function POST(req: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
-    // Get authenticated user with permissions
-    const user = await getAuthenticatedUser(req);
-    if (!user) {
-      return createErrorResponse("Unauthorized", 401);
-    }
-
-    // Check create permission
-    if (!hasPermission(user, Resource.PIPELINE, Action.CREATE)) {
-      return createErrorResponse("Forbidden", 403);
-    }
-
-    const data = await req.json();
+    const body = await request.json();
     
     // Validate the request body
-    const validatedData = createPipelineItemSchema.parse(data);
+    const validatedData = createSublistSchema.parse(body);
     
-    // Determine BDR assignment based on permissions first
-    let bdrId = user.id; // Default to current user
-    
-    // Handle BDR assignment from form data (name to ID conversion)
-    if (validatedData.bdr && hasPermission(user, Resource.PIPELINE, Action.VIEW_ALL)) {
-      // Users with VIEW_ALL permission can assign to any BDR by name
-      const targetBdr = await prisma.user.findFirst({
-        where: { name: validatedData.bdr },
-        select: { id: true }
-      });
-      if (targetBdr) {
-        bdrId = targetBdr.id;
-      }
-    } else if (validatedData.bdrId && hasPermission(user, Resource.PIPELINE, Action.VIEW_ALL)) {
-      // Users with VIEW_ALL permission can assign to any BDR by ID
-      bdrId = validatedData.bdrId;
-    }
-    
-    // Check if force parameter is passed to skip duplicate detection
-    const { searchParams } = new URL(req.url);
-    const force = searchParams.get('force') === 'true';
-    
-    // Non-blocking duplicate awareness: if similar item exists in another BDR's pipeline,
-    // record a duplicate warning for reporting/notifications but do not block creation.
-    if (!force && validatedData.name && validatedData.company) {
-      const existingDuplicate = await prisma.pipelineItem.findFirst({
-        where: {
-          name: { equals: validatedData.name, mode: 'insensitive' },
-          company: { equals: validatedData.company, mode: 'insensitive' },
-          bdrId: { not: bdrId },
-        },
-        select: { id: true }
-      });
-      if (existingDuplicate) {
-        // Fire-and-forget duplicate warning creation
-        duplicateDetectionService
-          .checkForDuplicates(
-            { name: validatedData.name, company: validatedData.company, email: validatedData.email, phone: validatedData.phone, title: validatedData.title, linkedinUrl: validatedData.link },
-            user.id,
-            DuplicateAction.PIPELINE_CREATE
-          )
-          .catch(() => {});
-      }
-    }
-    
-    // Create the pipeline item
-    const pipelineItem = await prisma.pipelineItem.create({
+    // Create the sublist
+    const sublist = await prisma.pipelineItem.create({
       data: {
         name: validatedData.name,
-        title: validatedData.title,
-        bdrId: bdrId,
-        company: validatedData.company,
+        bdr: validatedData.bdr,
         category: validatedData.category,
         status: validatedData.status,
-        value: validatedData.value,
-        probability: validatedData.probability,
-        expectedCloseDate: validatedData.expectedCloseDate,
-        callDate: validatedData.callDate,
-        lastUpdated: new Date(),
-        link: validatedData.link,
-        phone: validatedData.phone,
-        notes: validatedData.notes,
-        email: validatedData.email,
-        leadId: validatedData.leadId,
-        // Initialize sublist fields
-        parentId: validatedData.parentId || null,
-        isSublist: validatedData.isSublist || false,
-        sublistName: validatedData.sublistName || null,
-        sortOrder: validatedData.sortOrder || null,
+        parentId: validatedData.parentId,
+        isSublist: true,
+        sublistName: validatedData.name,
+        sortOrder: validatedData.sortOrder,
+        // Set default values for required fields
+        title: null,
+        company: null,
+        value: null,
+        probability: null,
+        expectedCloseDate: null,
+        callDate: null,
+        link: null,
+        phone: null,
+        notes: `Sublist: ${validatedData.name}`,
+        email: null,
+        leadId: null,
       },
       include: {
-        bdr: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          }
-        }
-      }
+        children: {
+          orderBy: {
+            sortOrder: 'asc',
+          },
+        },
+        parent: true,
+      },
     });
+
+    // Create activity log for sublist creation
+    await prisma.activityLog.create({
+      data: {
+        bdr: validatedData.bdr,
+        activityType: 'Note_Added',
+        description: `Created sublist: ${validatedData.name}`,
+        pipelineItemId: sublist.id,
+        notes: `Sublist created in ${validatedData.category} - ${validatedData.status}`,
+      },
+    });
+
+    return NextResponse.json(sublist);
+  } catch (error) {
+    console.error('Error creating sublist:', error);
     
-    return createSuccessResponse(pipelineItem, 201);
-  } catch (error: any) {
-    console.error("Error creating pipeline item:", error);
-    return createErrorResponse(error.message || "Failed to create pipeline item", 400);
+    if (error instanceof Error) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 400 }
+      );
+    }
+    
+    return NextResponse.json(
+      { error: 'Failed to create sublist' },
+      { status: 500 }
+    );
+  } finally {
+    await prisma.$disconnect();
   }
 } 

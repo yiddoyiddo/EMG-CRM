@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 
 interface Notification {
   id: string;
@@ -26,6 +27,9 @@ interface RealTimeNotificationsProps {
   maxNotifications?: number;
   autoRefresh?: boolean;
   refreshInterval?: number;
+  // When true, renders an inline high-priority banner under the bell.
+  // In compact placements like the sidebar, this should be false to avoid layout overflow.
+  showAlertBanner?: boolean;
 }
 
 const fetchNotifications = async (userId?: string) => {
@@ -60,9 +64,10 @@ export function RealTimeNotifications({
   showHighPriorityOnly = false,
   maxNotifications = 10,
   autoRefresh = true,
-  refreshInterval = 30000
+  refreshInterval = 30000,
+  showAlertBanner = false,
 }: RealTimeNotificationsProps) {
-  const [showNotifications, setShowNotifications] = useState(false);
+  const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
 
   const { data: notificationData, refetch } = useQuery({
@@ -151,28 +156,25 @@ export function RealTimeNotifications({
 
   return (
     <div className="relative">
-      {/* Notification Bell */}
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => setShowNotifications(!showNotifications)}
-        className="relative"
-      >
-        <Bell className="h-4 w-4" />
-        {unreadNotifications.length > 0 && (
-          <Badge 
-            variant="destructive" 
-            className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs"
-          >
-            {unreadNotifications.length}
-          </Badge>
-        )}
-      </Button>
+      <Popover open={open} onOpenChange={setOpen}>
+        {/* Notification Bell */}
+        <PopoverTrigger asChild>
+          <Button variant="outline" size="sm" className="relative">
+            <Bell className="h-4 w-4" />
+            {unreadNotifications.length > 0 && (
+              <Badge 
+                variant="destructive" 
+                className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs"
+              >
+                {unreadNotifications.length}
+              </Badge>
+            )}
+          </Button>
+        </PopoverTrigger>
 
-      {/* Notifications Panel */}
-      {showNotifications && (
-        <div className="absolute right-0 top-12 w-96 bg-background border rounded-lg shadow-lg z-50 max-h-96">
-          <Card>
+        {/* Notifications Panel */}
+        <PopoverContent side="top" align="end" sideOffset={8} className="z-[70] w-96 p-0 border-0 shadow-lg">
+          <Card className="border">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-lg">Notifications</CardTitle>
@@ -190,7 +192,7 @@ export function RealTimeNotifications({
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => setShowNotifications(false)}
+                    onClick={() => setOpen(false)}
                   >
                     <X className="h-4 w-4" />
                   </Button>
@@ -262,11 +264,11 @@ export function RealTimeNotifications({
               )}
             </CardContent>
           </Card>
-        </div>
-      )}
+        </PopoverContent>
+      </Popover>
 
-      {/* High Priority Alert Banner */}
-      {highPriorityNotifications.length > 0 && !showNotifications && (
+      {/* High Priority Alert Banner (opt-in; hidden by default to prevent sidebar layout issues) */}
+      {showAlertBanner && highPriorityNotifications.length > 0 && !open && (
         <Alert className="mt-2 border-red-200 bg-red-50">
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
@@ -274,7 +276,7 @@ export function RealTimeNotifications({
             <Button
               variant="link"
               size="sm"
-              onClick={() => setShowNotifications(true)}
+              onClick={() => setOpen(true)}
               className="p-0 h-auto font-semibold ml-1"
             >
               View now
