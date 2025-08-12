@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run lint)",
+      "Bash(npm run dev:*)",
+      "Bash(npx next build:*)",
+      "Bash(npx prisma:*)",
+      "Bash(sqlite3:*)",
+      "Bash(npx ts-node:*)",
+      "Bash(npm install:*)",
+      "Bash(npx next dev:*)",
+      "Bash(taskkill:*)",
+      "Bash(\"taskkill\" \"/F\" \"/PID\" \"21920\")",
+      "Bash(ctrl+c)",
+      "Bash(curl:*)",
+      "Bash(npm run build:*)",
+      "Bash(rm:*)",
+      "Bash(rg:*)",
+      "Bash(openssl rand:*)",
+      "Bash(find:*)",
+      "Bash(node:*)",
+      "Bash(pkill:*)",
+      "Bash(timeout 10 npm run dev)",
+      "Bash(timeout 8 npm run dev)",
+      "Bash(npx:*)",
+      "Bash(npm run typecheck:*)",
+      "Bash(npm run:*)",
+      "Bash(psql:*)"
+    ],
+    "deny": []
+  }
+}
