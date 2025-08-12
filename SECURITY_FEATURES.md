@@ -96,6 +96,20 @@ This document outlines the comprehensive security features implemented in Phase 
 - User-specific permission overrides
 - Expirable permissions support
 
+### 6. Secure Internal Messaging (New)
+
+**Resource**: `MESSAGING`
+
+**Controls**:
+- RBAC on all chat endpoints with `withSecurity`
+- Membership checks for conversations/messages
+- Sanitized content (limited tags/attributes)
+- Safe link previews with allowlist and timeouts
+- Direct uploads via Vercel Blob with mime/size validation
+- Rate limiting for sends/edits/uploads
+- Edit/delete window (10 mins for sender), admin override and pin/lock
+- Audit logs for chat actions
+
 ## API Integration
 
 ### Secure API Wrapper

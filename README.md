@@ -80,3 +80,16 @@ Each reporting view (Call Volume, Agreement Tracking, Lists Out) includes an **E
 ### Continuous Integration
 
 Pushes & pull-requests to `main` trigger the **CI** workflow (`.github/workflows/ci.yml`) which runs linting and build steps on Node 20.
+
+---
+
+## Internal Chat (BDR Messaging)
+
+- Navigate to `/chat` for DMs and group chats.
+- Features: mentions, reactions, attachments (Vercel Blob), read receipts, locks/pins (admin), Pusher realtime, Neon Postgres.
+- Setup:
+  - Set `PUSHER_*`, `NEXT_PUBLIC_PUSHER_*`, `BLOB_READ_WRITE_TOKEN`, and a Neon `DATABASE_URL` with `sslmode=require&pgbouncer=true`.
+  - Run migrations and seed messaging permissions:
+    - `npx prisma migrate dev`
+    - `npm run seed:messaging`
+- See `docs/CHAT_SYSTEM.md` for details.

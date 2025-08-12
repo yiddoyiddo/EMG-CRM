@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 import { 
   Home, Users, LineChart, TrendingUp, Settings, Shield, 
   BarChart3, UserPlus, Calendar, Phone, Target, Award,
-  Briefcase, DollarSign, FileText, Bell, Search, Menu, BookOpen
+  Briefcase, DollarSign, FileText, Bell, Search, Menu, BookOpen, MessageCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -21,6 +21,7 @@ import {
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import React, { useMemo, useState } from 'react';
 import { RealTimeNotifications } from '@/components/real-time-notifications';
+import { ChatDesktopNotifications } from '@/components/chat/notifications-client';
 
 interface NavItem {
   title: string;
@@ -52,6 +53,13 @@ const navigationSections: NavSection[] = [
   {
     title: 'Core CRM Functions',
     items: [
+      {
+        title: 'Chat',
+        href: '/chat',
+        icon: MessageCircle,
+        roles: ['ADMIN', 'DIRECTOR', 'MANAGER', 'TEAM_LEAD', 'BDR'],
+        description: 'Internal team messaging'
+      },
       {
         title: 'Leads',
         href: '/leads',
@@ -290,7 +298,8 @@ export function ContextAwareNav() {
                   {session.user?.role}
                 </p>
               </div>
-              <div className="ml-auto">
+              <div className="ml-auto flex items-center gap-2">
+                <ChatDesktopNotifications userId={session.user.id} />
                 <RealTimeNotifications userId={session.user.id} autoRefresh refreshInterval={30000} />
               </div>
             </div>

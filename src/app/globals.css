@@ -120,3 +120,9 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer utilities {
+  .mention {
+    @apply inline-block rounded-sm bg-accent px-1 text-accent-foreground;
+  }
+}

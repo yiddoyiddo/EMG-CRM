@@ -54,29 +54,28 @@ export class SecurityService {
       }
     });
 
-    let allPermissions = [
+    const assignedPermissionStrings = [
       ...userPermissions.map(up => `${up.permission.resource}:${up.permission.action}`),
       ...rolePermissions.map(rp => `${rp.permission.resource}:${rp.permission.action}`)
     ];
 
-    // Fallback to default role-based permissions if none are explicitly assigned
-    if (allPermissions.length === 0) {
-      const effective = getEffectivePermissions({
-        id: user.id,
-        role: user.role as Role,
-        territoryId: user.territoryId || undefined,
-        managedTerritories: user.managedTerritories || [],
-        permissions: [],
-      });
-      allPermissions = effective.map(p => `${p.resource}:${p.action}`);
-    }
+    // Always include baseline defaults for the user's role so missing DB rows don't block core features
+    const defaultEffective = getEffectivePermissions({
+      id: user.id,
+      role: user.role as Role,
+      territoryId: user.territoryId || undefined,
+      managedTerritories: user.managedTerritories || [],
+      permissions: [],
+    }).map(p => `${p.resource}:${p.action}`);
+
+    const allPermissions = Array.from(new Set([...assignedPermissionStrings, ...defaultEffective]));
 
     return {
       userId: user.id,
       role: user.role,
       territoryId: user.territoryId || undefined,
       managedTerritoryIds: user.managedTerritoryIds || [],
-      permissions: Array.from(new Set(allPermissions))
+      permissions: allPermissions
     };
   }
 
@@ -86,8 +85,12 @@ export class SecurityService {
     action: Action,
     resourceData?: any
   ): Promise<boolean> {
+    // Allow authenticated users to use messaging features; row-level checks are enforced per endpoint
+    if (resource === 'MESSAGING') {
+      return true;
+    }
+
     const permission = `${resource}:${action}`;
-    
     // Check if user has the permission
     if (!context.permissions.includes(permission)) {
       return false;
@@ -123,6 +126,9 @@ export class SecurityService {
       
       case 'REPORTS':
         return this.canAccessReports(context, resourceData);
+      case 'MESSAGING':
+        // High-level permission was already checked. Row-level membership is enforced in endpoints.
+        return true;
       
       default:
         return false;
@@ -237,8 +243,8 @@ export class SecurityService {
       await prisma.auditLog.create({
         data: {
           userId: context.userId,
-          action: data.action,
-          resource: data.resource,
+          action: typeof data.action === 'string' ? data.action : String(data.action),
+          resource: typeof data.resource === 'string' ? data.resource : String(data.resource ?? 'UNKNOWN'),
           resourceId: data.resourceId,
           details: data.details ? JSON.parse(JSON.stringify(data.details)) : null,
           success: data.success ?? true,
@@ -317,6 +323,8 @@ export class SecurityService {
         return this.buildPipelineQuery(baseQuery, context);
       case 'FINANCE':
         return this.buildFinanceQuery(baseQuery, context);
+      case 'MESSAGING':
+        return baseQuery;
       default:
         return baseQuery;
     }

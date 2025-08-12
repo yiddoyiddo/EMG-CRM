@@ -6,7 +6,11 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 export const prisma = globalForPrisma.prisma ?? new PrismaClient({
-  log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+  // Quiet the terminal: only log errors and warnings by default.
+  // Enable PRISMA_LOG_QUERIES=1 to re-enable query logging when debugging.
+  log: process.env.PRISMA_LOG_QUERIES === '1'
+    ? ['query', 'error', 'warn']
+    : ['error', 'warn'],
   datasources: {
     db: {
       url: process.env.DATABASE_URL,

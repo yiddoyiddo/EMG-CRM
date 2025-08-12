@@ -60,6 +60,12 @@ const DEFAULT_ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     { resource: Resource.DUPLICATES, action: Action.READ },
     { resource: Resource.DUPLICATES, action: Action.MANAGE },
     { resource: Resource.DUPLICATES, action: Action.VIEW_ALL },
+
+    // Messaging
+    { resource: Resource.MESSAGING, action: Action.READ },
+    { resource: Resource.MESSAGING, action: Action.CREATE },
+    { resource: Resource.MESSAGING, action: Action.UPDATE },
+    { resource: Resource.MESSAGING, action: Action.DELETE },
   ],
 
   DIRECTOR: [
@@ -94,6 +100,10 @@ const DEFAULT_ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     
     { resource: Resource.DUPLICATES, action: Action.READ },
     { resource: Resource.DUPLICATES, action: Action.VIEW_ALL },
+
+    // Messaging
+    { resource: Resource.MESSAGING, action: Action.READ },
+    { resource: Resource.MESSAGING, action: Action.CREATE },
   ],
 
   MANAGER: [
@@ -126,6 +136,10 @@ const DEFAULT_ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     
     { resource: Resource.DUPLICATES, action: Action.READ },
     { resource: Resource.DUPLICATES, action: Action.VIEW_TEAM },
+
+    // Messaging
+    { resource: Resource.MESSAGING, action: Action.READ },
+    { resource: Resource.MESSAGING, action: Action.CREATE },
   ],
 
   TEAM_LEAD: [
@@ -151,6 +165,10 @@ const DEFAULT_ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     { resource: Resource.ACTIVITY_LOGS, action: Action.VIEW_TEAM },
     
     { resource: Resource.DUPLICATES, action: Action.READ },
+
+    // Messaging
+    { resource: Resource.MESSAGING, action: Action.READ },
+    { resource: Resource.MESSAGING, action: Action.CREATE },
   ],
 
   BDR: [
@@ -171,6 +189,10 @@ const DEFAULT_ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     { resource: Resource.ACTIVITY_LOGS, action: Action.READ },
     
     { resource: Resource.DUPLICATES, action: Action.READ },
+
+    // Messaging
+    { resource: Resource.MESSAGING, action: Action.READ },
+    { resource: Resource.MESSAGING, action: Action.CREATE },
   ],
 };
 

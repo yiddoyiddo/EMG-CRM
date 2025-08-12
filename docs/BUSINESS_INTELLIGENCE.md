@@ -67,6 +67,12 @@ The Business Intelligence module provides advanced reporting capabilities with B
 - **Priority Filtering**: Filter by importance level
 - **User-specific Notifications**: Personalized alerts
 
+### 4. Messaging Analytics (new)
+- **Message Volume**: Count by user/team/time range
+- **Response Times**: Median/percentiles from message to first reply
+- **Mentions**: Mentions per user and across teams
+- **Engagement**: Reactions and read-receipt coverage
+
 ## Technical Implementation
 
 ### API Endpoints
