@@ -70,6 +70,7 @@ export function useLeadColumns(): ColumnDef<Lead, unknown>[] {
           </div>
         );
       },
+      meta: { priority: 'high' } as ColumnMeta,
     },
 
     // Add checkbox column - highest priority

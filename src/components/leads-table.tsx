@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { useVirtualizer } from '@tanstack/react-virtual';
 import {
   ColumnDef,
   flexRender,
@@ -150,14 +149,8 @@ export function LeadsTable<TData, TValue>({
     return () => window.removeEventListener('keydown', onKey);
   }, [selectedRows.length]);
 
-  // Virtualization
+  // Note: Virtualization removed to ensure consistent column layout and header alignment
   const tableContainerRef = React.useRef<HTMLDivElement | null>(null);
-  const rowVirtualizer = useVirtualizer({
-    count: table.getRowModel().rows.length,
-    getScrollElement: () => tableContainerRef.current,
-    estimateSize: () => 44,
-    overscan: 10,
-  });
 
   function handleStatusChange(status: string) {
     if (selectedRows.length === 0) {
@@ -419,66 +412,45 @@ export function LeadsTable<TData, TValue>({
         )}
       </div>
       
-      <div className="rounded-xl border border-white/20 dark:border-white/10 bg-white/40 dark:bg-white/[0.03] backdrop-blur-xl shadow-[0_15px_40px_-20px_rgba(0,0,0,0.45)]">
-        <div className="overflow-auto max-h-[70vh]" ref={tableContainerRef}>
-          <Table className="w-full" style={{ position: 'relative' }}>
+      <div className="max-h-[70vh] overflow-auto" ref={tableContainerRef}>
+          <Table className="w-full">
             <TableHeader>
-              <TableRow>
-                {table.getHeaderGroups().map((headerGroup) => (
-                  headerGroup.headers.map((header) => {
-                    return (
-                      <TableHead
-                        key={header.id}
-                        className="whitespace-nowrap px-4 text-foreground/80"
-                      >
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(
-                              header.column.columnDef.header,
-                              header.getContext()
-                            )}
-                      </TableHead>
-                    );
-                  })
-                ))}
-              </TableRow>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => (
+                    <TableHead
+                      key={header.id}
+                      className="whitespace-nowrap px-4 text-foreground/80"
+                    >
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
+                    </TableHead>
+                  ))}
+                </TableRow>
+              ))}
             </TableHeader>
             <TableBody>
               {table.getRowModel().rows?.length ? (
-                <>
-                  <tr>
-                    <td style={{ height: rowVirtualizer.getTotalSize() }} />
-                  </tr>
-                  {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-                    const row = table.getRowModel().rows[virtualRow.index];
-                    return (
-                      <TableRow
-                        key={row.id}
-                        data-state={row.getIsSelected() && "selected"}
-                        className="hover:bg-white/50 dark:hover:bg-white/5 transition-colors"
-                        style={{
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          width: '100%',
-                          transform: `translateY(${virtualRow.start}px)`,
-                        }}
-                      >
-                        {row.getVisibleCells().map((cell) => (
-                          <TableCell
-                            key={cell.id}
-                            className="px-4"
-                          >
-                            {flexRender(
-                              cell.column.columnDef.cell,
-                              cell.getContext()
-                            )}
-                          </TableCell>
-                        ))}
-                      </TableRow>
-                    );
-                  })}
-                </>
+                table.getRowModel().rows.map((row) => (
+                  <TableRow
+                    key={row.id}
+                    data-state={row.getIsSelected() && "selected"}
+                    className="hover:bg-white/50 dark:hover:bg-white/5 transition-colors"
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id} className="px-4">
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
               ) : (
                 <TableRow>
                   <TableCell
@@ -491,7 +463,6 @@ export function LeadsTable<TData, TValue>({
               )}
             </TableBody>
           </Table>
-        </div>
       </div>
 
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
