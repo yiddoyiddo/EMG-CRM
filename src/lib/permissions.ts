@@ -66,6 +66,12 @@ const DEFAULT_ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     { resource: Resource.MESSAGING, action: Action.CREATE },
     { resource: Resource.MESSAGING, action: Action.UPDATE },
     { resource: Resource.MESSAGING, action: Action.DELETE },
+
+    // Templates knowledgebase
+    { resource: Resource.TEMPLATES, action: Action.CREATE },
+    { resource: Resource.TEMPLATES, action: Action.READ },
+    { resource: Resource.TEMPLATES, action: Action.UPDATE },
+    { resource: Resource.TEMPLATES, action: Action.DELETE },
   ],
 
   DIRECTOR: [
@@ -104,6 +110,9 @@ const DEFAULT_ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     // Messaging
     { resource: Resource.MESSAGING, action: Action.READ },
     { resource: Resource.MESSAGING, action: Action.CREATE },
+
+    // Templates knowledgebase
+    { resource: Resource.TEMPLATES, action: Action.READ },
   ],
 
   MANAGER: [
@@ -140,6 +149,11 @@ const DEFAULT_ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     // Messaging
     { resource: Resource.MESSAGING, action: Action.READ },
     { resource: Resource.MESSAGING, action: Action.CREATE },
+
+    // Templates knowledgebase
+    { resource: Resource.TEMPLATES, action: Action.READ },
+    { resource: Resource.TEMPLATES, action: Action.CREATE },
+    { resource: Resource.TEMPLATES, action: Action.UPDATE },
   ],
 
   TEAM_LEAD: [
@@ -169,6 +183,11 @@ const DEFAULT_ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     // Messaging
     { resource: Resource.MESSAGING, action: Action.READ },
     { resource: Resource.MESSAGING, action: Action.CREATE },
+
+    // Templates knowledgebase
+    { resource: Resource.TEMPLATES, action: Action.READ },
+    { resource: Resource.TEMPLATES, action: Action.CREATE },
+    { resource: Resource.TEMPLATES, action: Action.UPDATE },
   ],
 
   BDR: [
@@ -193,6 +212,11 @@ const DEFAULT_ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     // Messaging
     { resource: Resource.MESSAGING, action: Action.READ },
     { resource: Resource.MESSAGING, action: Action.CREATE },
+
+    // Templates knowledgebase (BDRs can read and contribute)
+    { resource: Resource.TEMPLATES, action: Action.READ },
+    { resource: Resource.TEMPLATES, action: Action.CREATE },
+    { resource: Resource.TEMPLATES, action: Action.UPDATE },
   ],
 };
 
@@ -371,5 +395,11 @@ export const PERMISSIONS = {
     MANAGE: { resource: Resource.DUPLICATES, action: Action.MANAGE },
     VIEW_ALL: { resource: Resource.DUPLICATES, action: Action.VIEW_ALL },
     VIEW_TEAM: { resource: Resource.DUPLICATES, action: Action.VIEW_TEAM },
+  },
+  TEMPLATES: {
+    CREATE: { resource: Resource.TEMPLATES, action: Action.CREATE },
+    READ: { resource: Resource.TEMPLATES, action: Action.READ },
+    UPDATE: { resource: Resource.TEMPLATES, action: Action.UPDATE },
+    DELETE: { resource: Resource.TEMPLATES, action: Action.DELETE },
   },
 } as const;

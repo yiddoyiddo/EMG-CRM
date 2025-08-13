@@ -39,6 +39,9 @@ model User {
   duplicateWarnings  DuplicateWarning[]
   duplicateMatches   DuplicateMatch[]
   duplicateAudits    DuplicateAuditLog[] @relation("DuplicateAudits")
+  // Templates authored/edited
+  templatesCreated   Template[]          @relation("TemplateCreatedBy")
+  templatesUpdated   Template[]          @relation("TemplateUpdatedBy")
 }
 
 model Lead {
@@ -281,6 +284,47 @@ model AuditLog {
   @@index([success, timestamp])
 }
 
+// Templates Knowledgebase for BDRs
+model TemplateCategory {
+  id          String     @id @default(cuid())
+  name        String
+  description String?
+  sortOrder   Int        @default(0)
+  templates   Template[]
+
+  @@unique([name])
+}
+
+model Template {
+  id          String            @id @default(cuid())
+  title       String
+  content     String            // main text to copy/paste (markdown allowed)
+  type        TemplateType      @default(GENERAL)
+  tags        String[]          @default([])
+  isArchived  Boolean           @default(false)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  createdById String
+  updatedById String?
+  categoryId  String?
+  category    TemplateCategory? @relation(fields: [categoryId], references: [id])
+  createdBy   User              @relation("TemplateCreatedBy", fields: [createdById], references: [id])
+  updatedBy   User?             @relation("TemplateUpdatedBy", fields: [updatedById], references: [id])
+
+  @@index([title])
+  @@index([type])
+  @@index([isArchived])
+  @@index([categoryId])
+}
+
+enum TemplateType {
+  GENERAL
+  LINKEDIN_INTRO
+  SALES_CHASE
+  FOLLOW_UP
+  HANDOVER
+}
+
 model DataAccessPolicy {
   id         String   @id @default(cuid())
   userId     String
@@ -371,6 +415,8 @@ enum Resource {
   SETTINGS
   ACTIVITY_LOGS
   DUPLICATES
+  MESSAGING
+  TEMPLATES
 }
 
 enum Action {

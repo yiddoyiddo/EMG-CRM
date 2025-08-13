@@ -129,6 +129,8 @@ export class SecurityService {
       case 'MESSAGING':
         // High-level permission was already checked. Row-level membership is enforced in endpoints.
         return true;
+      case 'TEMPLATES':
+        return this.canAccessTemplates(context, action, resourceData);
       
       default:
         return false;
@@ -232,6 +234,13 @@ export class SecurityService {
     return ['MANAGER', 'DIRECTOR'].includes(context.role);
   }
 
+  private static canAccessTemplates(context: SecurityContext, action: Action, templateData?: any): boolean {
+    // All authenticated roles can READ templates by default if they have READ permission assigned
+    if (action === 'READ') return true;
+    // For CREATE/UPDATE/DELETE, allow BDR and above if they have the permission assigned
+    return ['BDR', 'TEAM_LEAD', 'MANAGER', 'DIRECTOR', 'ADMIN'].includes(context.role);
+  }
+
   static async logAction(data: AuditLogData, request?: NextRequest): Promise<void> {
     try {
       const context = await this.getSecurityContext();
@@ -324,6 +333,8 @@ export class SecurityService {
       case 'FINANCE':
         return this.buildFinanceQuery(baseQuery, context);
       case 'MESSAGING':
+        return baseQuery;
+      case 'TEMPLATES':
         return baseQuery;
       default:
         return baseQuery;

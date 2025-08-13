@@ -148,6 +148,27 @@ export type ActivityLogsResponse = {
   totalPages: number;
 }
 
+// Templates Types
+export type Template = {
+  id: string;
+  title: string;
+  content: string;
+  type: string;
+  tags: string[];
+  isArchived: boolean;
+  categoryId?: string | null;
+  createdAt: string | Date;
+  updatedAt: string | Date;
+};
+
+export type TemplatesResponse = {
+  items: Template[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+};
+
 // Helper function to get base URL
 function getBaseUrl() {
   if (typeof window !== 'undefined') {
@@ -168,6 +189,28 @@ function getBaseUrl() {
   // assume localhost
   return `http://localhost:${process.env.PORT ?? 3000}`;
 }
+// Templates API
+async function fetchTemplates(params: { search?: string; type?: string; categoryId?: string | null; includeArchived?: boolean; page?: number; pageSize?: number; }): Promise<TemplatesResponse> {
+  const sp = new URLSearchParams();
+  if (params.search) sp.set('search', params.search);
+  if (params.type) sp.set('type', params.type);
+  if (params.categoryId) sp.set('categoryId', params.categoryId);
+  if (params.includeArchived) sp.set('includeArchived', '1');
+  if (params.page) sp.set('page', String(params.page));
+  if (params.pageSize) sp.set('pageSize', String(params.pageSize));
+  const resp = await fetch(`${getBaseUrl()}/api/templates?${sp.toString()}`);
+  if (!resp.ok) throw new Error('Failed to fetch templates');
+  return resp.json();
+}
+
+export function useTemplates(params: { search?: string; type?: string; categoryId?: string | null; includeArchived?: boolean; page?: number; pageSize?: number; }) {
+  return useQuery({
+    queryKey: ['templates', params],
+    queryFn: () => fetchTemplates(params),
+    placeholderData: keepPreviousData,
+  });
+}
+
 
 // API Functions for Leads
 async function fetchLeads(filters: LeadFilter): Promise<LeadsResponse> {

@@ -10,15 +10,17 @@ const createUserSchema = z.object({
   name: z.string().min(1, "Name is required"),
   email: z.string().email("Invalid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
-  role: z.enum(["ADMIN", "BDR"]),
+  role: z.enum(["ADMIN", "DIRECTOR", "MANAGER", "TEAM_LEAD", "BDR"]),
+  territoryId: z.string().optional().nullable(),
 });
 
 const updateUserSchema = z.object({
   name: z.string().min(1, "Name is required").optional(),
   email: z.string().email("Invalid email address").optional(),
   password: z.string().min(6, "Password must be at least 6 characters").optional(),
-  role: z.enum(["ADMIN", "BDR"]).optional(),
+  role: z.enum(["ADMIN", "DIRECTOR", "MANAGER", "TEAM_LEAD", "BDR"]).optional(),
   isActive: z.boolean().optional(),
+  territoryId: z.string().nullable().optional(),
 });
 
 export async function GET(req: NextRequest) {
@@ -35,6 +37,8 @@ export async function GET(req: NextRequest) {
         name: true,
         email: true,
         role: true,
+        territoryId: true,
+        territory: { select: { id: true, name: true } },
         isActive: true,
         lastLoginAt: true,
         createdAt: true,
@@ -87,6 +91,7 @@ export async function POST(req: NextRequest) {
         email: validatedData.email,
         hashedPassword,
         role: validatedData.role as Role,
+        territoryId: validatedData.territoryId ?? null,
       },
       select: {
         id: true,

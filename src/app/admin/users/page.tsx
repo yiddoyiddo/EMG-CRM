@@ -13,16 +13,23 @@ import { useState } from 'react';
 import { format } from 'date-fns';
 import { UserPlus, Edit, Trash2, Shield, User as UserIcon, KeyRound } from 'lucide-react';
 import { toast } from 'sonner';
+async function fetchTerritories(): Promise<{ id: string; name: string }[]> {
+  const res = await fetch('/api/territories');
+  if (!res.ok) return [];
+  const data = await res.json();
+  return data?.territories ?? [];
+}
 
 interface User {
   id: string;
   name: string | null;
   email: string;
-  role: 'ADMIN' | 'BDR';
+  role: 'ADMIN' | 'DIRECTOR' | 'MANAGER' | 'TEAM_LEAD' | 'BDR';
   isActive: boolean;
   lastLoginAt: string | null;
   createdAt: string;
   updatedAt: string;
+  territory?: { id: string; name: string } | null;
   _count: {
     pipelineItems: number;
     leads: number;
@@ -34,14 +41,16 @@ interface CreateUserForm {
   name: string;
   email: string;
   password: string;
-  role: 'ADMIN' | 'BDR';
+  role: 'ADMIN' | 'DIRECTOR' | 'MANAGER' | 'TEAM_LEAD' | 'BDR';
+  territoryId?: string | null;
 }
 
 interface UpdateUserForm {
   name?: string;
   email?: string;
   password?: string;
-  role?: 'ADMIN' | 'BDR';
+  role?: 'ADMIN' | 'DIRECTOR' | 'MANAGER' | 'TEAM_LEAD' | 'BDR';
+  territoryId?: string | null;
 }
 
 async function fetchUsers(): Promise<User[]> {
@@ -111,6 +120,7 @@ export default function UsersAdmin() {
     email: '',
     password: '',
     role: 'BDR',
+    territoryId: null,
   });
   
   const [editForm, setEditForm] = useState<UpdateUserForm>({});
@@ -118,6 +128,10 @@ export default function UsersAdmin() {
   const { data: users = [], isLoading } = useQuery({
     queryKey: ['users'],
     queryFn: fetchUsers,
+  });
+  const { data: territories = [] } = useQuery({
+    queryKey: ['territories'],
+    queryFn: fetchTerritories,
   });
 
   const createMutation = useMutation({
@@ -186,6 +200,7 @@ export default function UsersAdmin() {
       name: user.name || '',
       email: user.email,
       role: user.role,
+      territoryId: user.territory?.id ?? null,
     });
     setEditDialogOpen(true);
   };
@@ -200,6 +215,7 @@ export default function UsersAdmin() {
     if (editForm.email && editForm.email !== selectedUser.email) updates.email = editForm.email;
     if (editForm.password) updates.password = editForm.password;
     if (editForm.role && editForm.role !== selectedUser.role) updates.role = editForm.role;
+    if (editForm.territoryId !== selectedUser.territory?.id) updates.territoryId = editForm.territoryId ?? null;
     
     if (Object.keys(updates).length === 0) {
       toast.info('No changes to save');
@@ -299,21 +315,41 @@ export default function UsersAdmin() {
                     required
                   />
                 </div>
-                <div>
+                 <div>
                   <Label htmlFor="create-role">Role</Label>
                   <Select
                     value={createForm.role}
-                    onValueChange={(value: 'ADMIN' | 'BDR') => setCreateForm({ ...createForm, role: value })}
+                     onValueChange={(value: any) => setCreateForm({ ...createForm, role: value })}
                   >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="BDR">BDR</SelectItem>
+                       <SelectItem value="TEAM_LEAD">Team Lead</SelectItem>
+                       <SelectItem value="MANAGER">Manager</SelectItem>
+                       <SelectItem value="DIRECTOR">Director</SelectItem>
                       <SelectItem value="ADMIN">Admin</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
+                 <div>
+                   <Label htmlFor="create-territory">Territory (optional)</Label>
+                   <Select
+                     value={createForm.territoryId || ''}
+                     onValueChange={(value) => setCreateForm({ ...createForm, territoryId: value || null })}
+                   >
+                     <SelectTrigger>
+                       <SelectValue placeholder="Select a territory" />
+                     </SelectTrigger>
+                     <SelectContent>
+                       <SelectItem value="">None</SelectItem>
+                       {territories.map(t => (
+                         <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                       ))}
+                     </SelectContent>
+                   </Select>
+                 </div>
                 <Button type="submit" disabled={createMutation.isPending} className="w-full">
                   {createMutation.isPending ? 'Creating...' : 'Create User'}
                 </Button>
@@ -430,21 +466,41 @@ export default function UsersAdmin() {
                 placeholder="New password"
               />
             </div>
-            <div>
+              <div>
               <Label htmlFor="edit-role">Role</Label>
               <Select
                 value={editForm.role || 'BDR'}
-                onValueChange={(value: 'ADMIN' | 'BDR') => setEditForm({ ...editForm, role: value })}
+                onValueChange={(value: any) => setEditForm({ ...editForm, role: value })}
               >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="BDR">BDR</SelectItem>
+                    <SelectItem value="TEAM_LEAD">Team Lead</SelectItem>
+                    <SelectItem value="MANAGER">Manager</SelectItem>
+                    <SelectItem value="DIRECTOR">Director</SelectItem>
                   <SelectItem value="ADMIN">Admin</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+              <div>
+                <Label htmlFor="edit-territory">Territory (optional)</Label>
+                <Select
+                  value={editForm.territoryId || ''}
+                  onValueChange={(value) => setEditForm({ ...editForm, territoryId: value || null })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a territory" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">None</SelectItem>
+                    {territories.map(t => (
+                      <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             <Button type="submit" disabled={updateMutation.isPending} className="w-full">
               {updateMutation.isPending ? 'Updating...' : 'Update User'}
             </Button>

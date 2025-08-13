@@ -54,11 +54,11 @@ export default function TeamPage() {
     try {
       setLoading(true);
       
-      // Fetch team members
+      // Fetch team members (API may return { users } or { data: { users } })
       const teamResponse = await fetch('/api/users?includeStats=true');
       if (teamResponse.ok) {
         const teamData = await teamResponse.json();
-        setTeamMembers(teamData.users || []);
+        setTeamMembers((teamData?.users || teamData?.data?.users || []) as any);
       }
 
       // Fetch team statistics

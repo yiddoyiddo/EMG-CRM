@@ -10,8 +10,9 @@ const updateUserSchema = z.object({
   name: z.string().min(1, "Name is required").optional(),
   email: z.string().email("Invalid email address").optional(),
   password: z.string().min(6, "Password must be at least 6 characters").optional(),
-  role: z.enum(["ADMIN", "BDR"]).optional(),
+  role: z.enum(["ADMIN", "DIRECTOR", "MANAGER", "TEAM_LEAD", "BDR"]).optional(),
   isActive: z.boolean().optional(),
+  territoryId: z.string().nullable().optional(),
 });
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -111,6 +112,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (validatedData.email !== undefined) updateData.email = validatedData.email;
     if (validatedData.role !== undefined) updateData.role = validatedData.role as Role;
     if (validatedData.isActive !== undefined) updateData.isActive = validatedData.isActive;
+    if (validatedData.territoryId !== undefined) updateData.territoryId = validatedData.territoryId;
     
     // Hash password if provided
     if (validatedData.password) {

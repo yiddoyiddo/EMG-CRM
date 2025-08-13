@@ -20,7 +20,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import React, { useMemo, useState } from 'react';
-import { RealTimeNotifications } from '@/components/real-time-notifications';
 import { ChatDesktopNotifications } from '@/components/chat/notifications-client';
 
 interface NavItem {
@@ -82,6 +81,13 @@ const navigationSections: NavSection[] = [
         description: 'Manage Q&A and interview opportunities'
       },
       {
+        title: 'Templates',
+        href: '/templates',
+        icon: FileText,
+        roles: ['ADMIN', 'DIRECTOR', 'MANAGER', 'TEAM_LEAD', 'BDR'],
+        description: 'BDR knowledgebase of reusable outreach templates'
+      },
+      {
         title: 'Call Schedule',
         href: '/pipeline?view=today',
         icon: Calendar,
@@ -109,7 +115,7 @@ const navigationSections: NavSection[] = [
       },
       {
         title: 'Team Reports',
-        href: '/reporting?view=team',
+        href: '/reporting/team',
         icon: BarChart3,
         roles: ['TEAM_LEAD', 'MANAGER', 'DIRECTOR', 'ADMIN'],
         description: 'Team performance metrics'
@@ -300,8 +306,6 @@ export function ContextAwareNav() {
               </div>
               <div className="ml-auto flex items-center gap-2">
                 <ChatDesktopNotifications userId={session.user.id} />
-                {/* Hide alert banner in compact sidebar footer to prevent layout overlap */}
-                <RealTimeNotifications userId={session.user.id} autoRefresh refreshInterval={30000} showAlertBanner={false} />
               </div>
             </div>
           </div>
