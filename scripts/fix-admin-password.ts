@@ -13,7 +13,7 @@ async function fixAdminPassword() {
     // Update the admin user's password
     const updatedUser = await prisma.user.update({
       where: {
-        email: 'admin@emg.com'
+        email: 'admin@busenq.com'
       },
       data: {
         hashedPassword: hashedPassword
@@ -34,7 +34,7 @@ async function fixAdminPassword() {
     }
 
     console.log('\n🔑 Login credentials:');
-    console.log('   Email: admin@emg.com');
+    console.log('   Email: admin@busenq.com');
     console.log('   Password: admin123');
 
   } catch (error) {

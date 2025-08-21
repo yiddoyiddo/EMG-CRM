@@ -54,7 +54,7 @@ function normalizeString(value, fallback = null) {
 async function upsertUserByName(name) {
   const clean = normalizeString(name);
   if (!clean) return null;
-  const email = `${clean.toLowerCase().replace(/\s+/g, '.')}@emg.com`;
+  const email = `${clean.toLowerCase().replace(/\s+/g, '.')}@busenq.com`;
   const user = await prisma.user.upsert({
     where: { email },
     update: {},

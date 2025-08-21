@@ -48,6 +48,34 @@ import { financeStatusEnum, leadBdrEnum } from '@/lib/validations';
 import { formatDateUK, getMonthName } from '@/lib/date-utils';
 import { toast } from 'sonner';
 
+// Commission calculation utilities
+export const calculateCommissions = (entry: FinanceEntry) => {
+  const actualGbp = entry.actualGbpReceived || 0;
+  
+  if (!entry.leadGen) {
+    // Non-lead gen: no Dan commission
+    return {
+      bdrCommission: 0,
+      danCommission: 0
+    };
+  }
+  
+  // Lead gen calculations
+  if (entry.isMarkCawstonLead) {
+    // Mark Cawston leads: BDR 50%, Dan 7.5%
+    return {
+      bdrCommission: actualGbp * 0.50,
+      danCommission: actualGbp * 0.075
+    };
+  } else {
+    // Other lead gen: BDR 42.5%, Dan 7.5%
+    return {
+      bdrCommission: actualGbp * 0.425,
+      danCommission: actualGbp * 0.075
+    };
+  }
+};
+
 interface FinanceEntry {
   id: number;
   company: string;
@@ -63,6 +91,10 @@ interface FinanceEntry {
   actualGbpReceived: number | null;
   notes: string | null;
   commissionPaid: boolean;
+  danCommissionPaid: boolean;
+  bdrCommissionAmount: number | null;
+  danCommissionAmount: number | null;
+  isMarkCawstonLead: boolean;
   month: string;
   createdAt: Date;
   updatedAt: Date;
@@ -219,7 +251,7 @@ export function FinanceTable({
     },
     {
       accessorKey: 'soldAmount',
-      header: 'Sold Amount',
+      header: 'Package Value (USD)',
       cell: ({ row }) => {
         const amount = row.getValue('soldAmount') as number | null;
         return amount ? `$${amount.toLocaleString()}` : '-';
@@ -227,7 +259,7 @@ export function FinanceTable({
     },
     {
       accessorKey: 'gbpAmount',
-      header: 'GBP Amount',
+      header: 'Package Value (GBP)',
       cell: ({ row }) => {
         const amount = row.getValue('gbpAmount') as number | null;
         const exchangeRate = row.getValue('exchangeRate') as number | null;
@@ -277,11 +309,46 @@ export function FinanceTable({
       },
     },
     {
+      accessorKey: 'bdrCommissionAmount',
+      header: 'BDR Commission Owed',
+      cell: ({ row }) => {
+        const entry = row.original;
+        const { bdrCommission } = calculateCommissions(entry);
+        return bdrCommission > 0 ? `£${bdrCommission.toFixed(2)}` : '-';
+      },
+    },
+    {
+      accessorKey: 'danCommissionAmount', 
+      header: 'Dan Reeves Commission Owed',
+      cell: ({ row }) => {
+        const entry = row.original;
+        const { danCommission } = calculateCommissions(entry);
+        return danCommission > 0 ? `£${danCommission.toFixed(2)}` : '-';
+      },
+    },
+    {
       accessorKey: 'commissionPaid',
-      header: 'Commission Paid',
+      header: 'BDR Commission Paid',
       cell: ({ row }) => (
         <div className="text-center">
-          {row.getValue('commissionPaid') ? '✓' : '✗'}
+          {row.getValue('commissionPaid') ? (
+            <span className="text-green-600 font-bold">✓</span>
+          ) : (
+            <span className="text-red-500">✗</span>
+          )}
+        </div>
+      ),
+    },
+    {
+      accessorKey: 'danCommissionPaid',
+      header: 'Dan Commission Paid',
+      cell: ({ row }) => (
+        <div className="text-center">
+          {row.getValue('danCommissionPaid') ? (
+            <span className="text-green-600 font-bold">✓</span>
+          ) : (
+            <span className="text-red-500">✗</span>
+          )}
         </div>
       ),
     },
@@ -395,12 +462,15 @@ export function FinanceTable({
                         <TableHead>Status</TableHead>
                         <TableHead>Invoice Date</TableHead>
                         <TableHead>Due Date</TableHead>
-                        <TableHead>Sold Amount</TableHead>
-                        <TableHead>GBP Amount</TableHead>
+                        <TableHead>Package Value (USD)</TableHead>
+                        <TableHead>Package Value (GBP)</TableHead>
                         <TableHead>Exchange Rate</TableHead>
                         <TableHead>Exchange Rate Date</TableHead>
-                        <TableHead>Actual GBP</TableHead>
-                        <TableHead>Commission</TableHead>
+                        <TableHead>Actual GBP Received</TableHead>
+                        <TableHead>BDR Commission Owed</TableHead>
+                        <TableHead>Dan Commission Owed</TableHead>
+                        <TableHead>BDR Commission Paid</TableHead>
+                        <TableHead>Dan Commission Paid</TableHead>
                         <TableHead>Notes</TableHead>
                         <TableHead>Actions</TableHead>
                       </TableRow>
@@ -465,8 +535,31 @@ export function FinanceTable({
                           <TableCell>
                             {entry.actualGbpReceived ? `£${entry.actualGbpReceived.toLocaleString()}` : '-'}
                           </TableCell>
+                          <TableCell>
+                            {(() => {
+                              const { bdrCommission } = calculateCommissions(entry);
+                              return bdrCommission > 0 ? `£${bdrCommission.toFixed(2)}` : '-';
+                            })()}
+                          </TableCell>
+                          <TableCell>
+                            {(() => {
+                              const { danCommission } = calculateCommissions(entry);
+                              return danCommission > 0 ? `£${danCommission.toFixed(2)}` : '-';
+                            })()}
+                          </TableCell>
                           <TableCell className="text-center">
-                            {entry.commissionPaid ? '✓' : '✗'}
+                            {entry.commissionPaid ? (
+                              <span className="text-green-600 font-bold">✓</span>
+                            ) : (
+                              <span className="text-red-500">✗</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {entry.danCommissionPaid ? (
+                              <span className="text-green-600 font-bold">✓</span>
+                            ) : (
+                              <span className="text-red-500">✗</span>
+                            )}
                           </TableCell>
                           <TableCell>
                             {entry.notes ? (

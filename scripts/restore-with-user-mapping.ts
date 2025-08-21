@@ -5,7 +5,7 @@ import path from 'path';
 const prisma = new PrismaClient();
 // !! Update this path if necessary based on the Cursor logs !!
 const BACKUP_FILE = path.resolve(process.cwd(), 'backup/data-backup-1753726495118.json');
-const FALLBACK_ADMIN_EMAIL = 'admin@emg.com'; // Fallback for orphaned data (e.g. Gary Smith)
+const FALLBACK_ADMIN_EMAIL = 'admin@busenq.com'; // Fallback for orphaned data (e.g. Gary Smith)
 
 // Helper to convert dates (add any missing date fields from your models)
 const convertDates = (item: any) => {

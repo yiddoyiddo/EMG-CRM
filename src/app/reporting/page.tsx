@@ -9,6 +9,7 @@ import Link from 'next/link';
 import { Progress } from '@/components/ui/progress';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Navbar } from '@/components/ui/navbar';
+import { useSession } from 'next-auth/react';
 import {
   Phone,
   FileText,
@@ -51,11 +52,16 @@ const fetchExecutiveDashboard = async (bdr: string) => {
 };
 
 export default function ReportingPage() {
+  const { data: session } = useSession();
   const [bdr, setBdr] = useState('all');
 
+  // For BDRs, force them to only see their own data
+  const effectiveBdr = session?.user?.role === 'BDR' ? session.user.name || 'all' : bdr;
+
   const { data, isLoading, error } = useQuery({
-    queryKey: ['executiveDashboard', bdr],
-    queryFn: () => fetchExecutiveDashboard(bdr),
+    queryKey: ['executiveDashboard', effectiveBdr],
+    queryFn: () => fetchExecutiveDashboard(effectiveBdr),
+    enabled: !!session, // Only run query when session is available
   });
 
   const getStatusColor = (status: string) => {
@@ -87,25 +93,67 @@ export default function ReportingPage() {
       </span>
     );
   };
+
+  // Show loading state when session is not loaded yet
+  if (!session) {
+    return (
+      <>
+        <Navbar />
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p>Loading...</p>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  if (error) {
+    return (
+      <>
+        <Navbar />
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center text-red-600">
+            <AlertCircle className="h-8 w-8 mx-auto mb-4" />
+            <p>Error loading dashboard: {error.message}</p>
+          </div>
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
       <Navbar />
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Reporting Dashboard</h1>
-          <div className="flex items-center gap-2 rounded-xl border border-white/30 dark:border-white/10 bg-white/60 dark:bg-white/[0.05] backdrop-blur p-2">
-            <Select onValueChange={setBdr} value={bdr}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select BDR" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All BDRs</SelectItem>
-                {data?.dashboard.bdrList?.map((bdr: string) => (
-                  <SelectItem key={bdr} value={bdr}>{bdr}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <h1 className="text-2xl font-bold">
+            {session?.user?.role === 'BDR' 
+              ? `My Performance Dashboard` 
+              : 'Reporting Dashboard'
+            }
+          </h1>
+          {session?.user?.role !== 'BDR' && (
+            <div className="flex items-center gap-2 rounded-xl border border-white/30 dark:border-white/10 bg-white/60 dark:bg-white/[0.05] backdrop-blur p-2">
+              <Select onValueChange={setBdr} value={bdr}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select BDR" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All BDRs</SelectItem>
+                  {data?.dashboard.bdrList?.map((bdrName: string) => (
+                    <SelectItem key={bdrName} value={bdrName}>{bdrName}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          {session?.user?.role === 'BDR' && (
+            <div className="flex items-center gap-2 rounded-xl border border-white/30 dark:border-white/10 bg-white/60 dark:bg-white/[0.05] backdrop-blur p-2 px-4 py-2">
+              <span className="text-sm font-medium">BDR: {session.user.name}</span>
+            </div>
+          )}
         </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>

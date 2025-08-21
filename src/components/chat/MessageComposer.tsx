@@ -27,7 +27,10 @@ export function MessageComposer({
   const [users, setUsers] = useState<User[]>([]);
   const [mentionOpen, setMentionOpen] = useState(false);
   const [mentionQuery, setMentionQuery] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     fetch('/api/users')
@@ -39,13 +42,42 @@ export function MessageComposer({
       .catch(() => {});
   }, []);
 
+  // Auto-resize textarea
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`;
+    }
+  }, [text]);
+
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
-    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-      e.preventDefault();
-      doSend();
-      return;
+    if (e.key === 'Enter') {
+      if (!e.shiftKey && !mentionOpen) {
+        e.preventDefault();
+        doSend();
+        return;
+      }
+      // Allow Shift+Enter for new lines
     }
     if (onTyping) onTyping();
+  }
+
+  // Drag and drop handlers
+  function handleDragOver(e: React.DragEvent) {
+    e.preventDefault();
+    setDragOver(true);
+  }
+
+  function handleDragLeave(e: React.DragEvent) {
+    e.preventDefault();
+    setDragOver(false);
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setDragOver(false);
+    const droppedFiles = Array.from(e.dataTransfer.files);
+    setFiles(prev => [...prev, ...droppedFiles]);
   }
 
   function insertEmoji(emoji: any) {
@@ -79,6 +111,9 @@ export function MessageComposer({
   }
 
   async function uploadFiles(): Promise<any[]> {
+    if (files.length === 0) return [];
+    
+    setIsUploading(true);
     const results: any[] = [];
     for (const file of files) {
       try {
@@ -96,53 +131,157 @@ export function MessageComposer({
         toast.error(`Failed to upload ${file.name}`);
       }
     }
+    setIsUploading(false);
     return results;
   }
 
   async function doSend() {
     const trimmed = text.trim();
     if (!trimmed && files.length === 0) return;
-    const attachments = await uploadFiles();
-    await onSend({ content: trimmed, attachments });
-    setText('');
-    setFiles([]);
-    if (fileInputRef.current) fileInputRef.current.value = '';
+    if (isUploading) return;
+    
+    try {
+      const attachments = await uploadFiles();
+      await onSend({ content: trimmed, attachments });
+      setText('');
+      setFiles([]);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      // Focus back to textarea after sending
+      setTimeout(() => {
+        textareaRef.current?.focus();
+      }, 100);
+    } catch (error) {
+      console.error('Failed to send message:', error);
+      toast.error('Failed to send message');
+    }
   }
 
+  function removeFile(index: number) {
+    setFiles(prev => prev.filter((_, i) => i !== index));
+  }
+
+  const canSend = (text.trim() || files.length > 0) && !isUploading;
+
   return (
-    <div className="border-t bg-card/40 p-2 md:p-3">
-      <div className="flex items-end gap-2">
+    <div 
+      className={`relative border-t bg-gradient-to-r from-background to-muted/20 p-4 transition-colors ${dragOver ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-300' : ''}`}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      {/* File attachments preview */}
+      {files.length > 0 && (
+        <div className="mb-3 flex flex-wrap gap-2">
+          {files.map((file, index) => (
+            <div key={`${file.name}-${file.size}-${index}`} className="group flex items-center gap-2 rounded-lg border bg-muted/50 px-3 py-2 text-sm">
+              <Paperclip className="h-3 w-3 text-muted-foreground" />
+              <span className="font-medium truncate max-w-[150px]">{file.name}</span>
+              <span className="text-xs text-muted-foreground">({Math.round(file.size / 1024)}KB)</span>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity"
+                onClick={() => removeFile(index)}
+              >
+                ×
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Drag overlay */}
+      {dragOver && (
+        <div className="absolute inset-4 bg-blue-500/10 border-2 border-dashed border-blue-300 rounded-lg flex items-center justify-center z-10">
+          <div className="text-blue-600 font-medium">Drop files to attach</div>
+        </div>
+      )}
+
+      <div className="flex items-end gap-3">
+        {/* Emoji picker */}
         <Popover open={showEmoji} onOpenChange={setShowEmoji}>
           <PopoverTrigger asChild>
-            <Button variant="outline" size="icon" aria-label="Insert emoji"><Smile className="h-4 w-4" /></Button>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="rounded-full hover:bg-muted"
+              aria-label="Insert emoji"
+            >
+              <Smile className="h-5 w-5" />
+            </Button>
           </PopoverTrigger>
-          <PopoverContent className="p-0">
+          <PopoverContent className="p-0 w-auto" align="start">
             {Picker ? <Picker onSelect={insertEmoji} /> : null}
           </PopoverContent>
         </Popover>
-        <input ref={fileInputRef} type="file" multiple className="hidden" onChange={(e) => setFiles(Array.from(e.target.files || []))} />
-        <Button type="button" variant="outline" size="icon" aria-label="Attach files" onClick={() => fileInputRef.current?.click()}>
-          <Paperclip className="h-4 w-4" />
+
+        {/* File attachment */}
+        <input 
+          ref={fileInputRef} 
+          type="file" 
+          multiple 
+          className="hidden" 
+          onChange={(e) => setFiles(prev => [...prev, ...Array.from(e.target.files || [])])} 
+        />
+        <Button 
+          type="button" 
+          variant="ghost" 
+          size="icon" 
+          className="rounded-full hover:bg-muted"
+          aria-label="Attach files" 
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <Paperclip className="h-5 w-5" />
         </Button>
+
+        {/* Message input */}
         <div className="relative flex-1">
-          <Textarea rows={2} value={text} onChange={onChange} onKeyDown={handleKeyDown} placeholder="Type a message (Ctrl/Cmd + Enter to send). Use @ to mention..." />
+          <Textarea
+            ref={textareaRef}
+            value={text}
+            onChange={onChange}
+            onKeyDown={handleKeyDown}
+            placeholder="Type a message... (Enter to send, Shift+Enter for new line)"
+            className="resize-none min-h-[44px] max-h-[120px] rounded-2xl border-2 focus:border-blue-400 transition-colors pr-4 py-3"
+            rows={1}
+          />
+          
+          {/* Mention dropdown */}
           {mentionOpen && (
-            <div className="absolute z-10 mt-1 w-full rounded-md border bg-popover shadow">
+            <div className="absolute bottom-full mb-1 w-full rounded-lg border bg-popover shadow-lg z-20">
               {(users.filter((u) => u.name?.toLowerCase().includes(mentionQuery.toLowerCase())).slice(0, 6)).map((u) => (
-                <button key={u.id} type="button" className="block w-full text-left px-2 py-1 hover:bg-accent" onClick={() => selectMention(u)}>
-                  {u.name}
+                <button 
+                  key={u.id} 
+                  type="button" 
+                  className="block w-full text-left px-3 py-2 hover:bg-accent first:rounded-t-lg last:rounded-b-lg transition-colors" 
+                  onClick={() => selectMention(u)}
+                >
+                  <div className="font-medium">{u.name}</div>
                 </button>
               ))}
             </div>
           )}
         </div>
-        <Button onClick={doSend} aria-label="Send message"><Send className="h-4 w-4" /></Button>
+
+        {/* Send button */}
+        <Button 
+          onClick={doSend}
+          disabled={!canSend}
+          size="icon"
+          className={`rounded-full transition-all duration-200 ${
+            canSend 
+              ? 'bg-blue-500 hover:bg-blue-600 text-white shadow-md hover:shadow-lg' 
+              : 'bg-muted text-muted-foreground'
+          }`}
+          aria-label="Send message"
+        >
+          {isUploading ? (
+            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+          ) : (
+            <Send className="h-4 w-4" />
+          )}
+        </Button>
       </div>
-      {files.length > 0 && (
-        <div className="mt-2 flex flex-wrap gap-2 text-sm text-muted-foreground">
-          {files.map((f) => (<span key={f.name} className="rounded bg-accent px-2 py-1">{f.name}</span>))}
-        </div>
-      )}
     </div>
   );
 }

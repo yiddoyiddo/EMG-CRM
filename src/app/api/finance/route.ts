@@ -184,6 +184,68 @@ export async function GET(req: NextRequest) {
         avgDealSize: data.deals > 0 ? data.revenue / data.deals : 0
       })).sort((a, b) => b.revenue - a.revenue);
       
+      // Calculate Dan Reeves commission analytics
+      const leadGenEntries = allEntries.filter(entry => entry.leadGen && entry.actualGbpReceived);
+      
+      const danCommissions = {
+        totalOwed: 0,
+        totalPaid: 0,
+        outstanding: 0,
+        byStatus: {} as { [key: string]: { owed: number; paid: number; outstanding: number } },
+        byMonth: [] as Array<{ month: string; owed: number; paid: number; outstanding: number }>
+      };
+      
+      // Calculate commission amounts using the same logic as frontend
+      leadGenEntries.forEach(entry => {
+        const actualGbp = entry.actualGbpReceived || 0;
+        const danCommissionAmount = actualGbp * 0.075; // 7.5% for Dan
+        
+        danCommissions.totalOwed += danCommissionAmount;
+        
+        if (entry.danCommissionPaid) {
+          danCommissions.totalPaid += danCommissionAmount;
+        } else {
+          danCommissions.outstanding += danCommissionAmount;
+        }
+        
+        // Group by status
+        const status = entry.status;
+        if (!danCommissions.byStatus[status]) {
+          danCommissions.byStatus[status] = { owed: 0, paid: 0, outstanding: 0 };
+        }
+        danCommissions.byStatus[status].owed += danCommissionAmount;
+        if (entry.danCommissionPaid) {
+          danCommissions.byStatus[status].paid += danCommissionAmount;
+        } else {
+          danCommissions.byStatus[status].outstanding += danCommissionAmount;
+        }
+      });
+      
+      // Group by month
+      const monthlyCommissions = leadGenEntries.reduce((acc: {[key: string]: {owed: number, paid: number, outstanding: number}}, entry) => {
+        const month = entry.month;
+        const actualGbp = entry.actualGbpReceived || 0;
+        const danCommissionAmount = actualGbp * 0.075;
+        
+        if (!acc[month]) {
+          acc[month] = { owed: 0, paid: 0, outstanding: 0 };
+        }
+        
+        acc[month].owed += danCommissionAmount;
+        if (entry.danCommissionPaid) {
+          acc[month].paid += danCommissionAmount;
+        } else {
+          acc[month].outstanding += danCommissionAmount;
+        }
+        
+        return acc;
+      }, {});
+      
+      // Convert to array and sort by month
+      danCommissions.byMonth = Object.entries(monthlyCommissions)
+        .map(([month, data]) => ({ month, ...data }))
+        .sort((a, b) => b.month.localeCompare(a.month));
+      
       const analytics = {
         totalRevenue,
         ytdRevenue,
@@ -200,7 +262,8 @@ export async function GET(req: NextRequest) {
         statusBreakdown,
         monthlyTrends,
         bdrPerformance,
-        paymentStatus
+        paymentStatus,
+        danCommissions
       };
       
       return NextResponse.json({ analytics });

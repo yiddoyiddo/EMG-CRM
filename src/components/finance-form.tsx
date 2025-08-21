@@ -33,6 +33,10 @@ interface FinanceEntry {
   actualGbpReceived: number | null;
   notes: string | null;
   commissionPaid: boolean;
+  danCommissionPaid: boolean;
+  bdrCommissionAmount: number | null;
+  danCommissionAmount: number | null;
+  isMarkCawstonLead: boolean;
   month: string;
 }
 
@@ -58,6 +62,10 @@ export function FinanceForm({ entry, onSubmit, onCancel, isLoading }: FinanceFor
     actualGbpReceived: entry?.actualGbpReceived || null,
     notes: entry?.notes || null,
     commissionPaid: entry?.commissionPaid || false,
+    danCommissionPaid: entry?.danCommissionPaid || false,
+    bdrCommissionAmount: entry?.bdrCommissionAmount || null,
+    danCommissionAmount: entry?.danCommissionAmount || null,
+    isMarkCawstonLead: entry?.isMarkCawstonLead || (entry?.bdr === 'Mark Cawston'),
     month: entry?.month || '2025-01',
   });
 
@@ -129,7 +137,11 @@ export function FinanceForm({ entry, onSubmit, onCancel, isLoading }: FinanceFor
 
         <div className="space-y-2">
           <Label htmlFor="bdr">BDR *</Label>
-          <Select value={formData.bdr} onValueChange={(value) => setFormData({ ...formData, bdr: value })}>
+          <Select value={formData.bdr} onValueChange={(value) => setFormData({ 
+            ...formData, 
+            bdr: value,
+            isMarkCawstonLead: value === 'Mark Cawston'
+          })}>
             <SelectTrigger>
               <SelectValue placeholder="Select BDR" />
             </SelectTrigger>
@@ -280,13 +292,50 @@ export function FinanceForm({ entry, onSubmit, onCancel, isLoading }: FinanceFor
         <Label htmlFor="leadGen">Lead Gen</Label>
       </div>
 
-      <div className="flex items-center space-x-2">
-        <Checkbox
-          id="commissionPaid"
-          checked={formData.commissionPaid}
-          onCheckedChange={(checked) => setFormData({ ...formData, commissionPaid: !!checked })}
-        />
-        <Label htmlFor="commissionPaid">Commission Paid</Label>
+      {/* Commission Calculations Display */}
+      {formData.actualGbpReceived && formData.leadGen && (
+        <div className="p-4 bg-gray-50 border rounded-lg">
+          <h4 className="font-semibold mb-3">Commission Calculations</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+            <div>
+              <span className="text-gray-600">BDR Commission ({formData.isMarkCawstonLead ? '50%' : '42.5%'}):</span>
+              <div className="font-medium">
+                £{((formData.actualGbpReceived || 0) * (formData.isMarkCawstonLead ? 0.50 : 0.425)).toFixed(2)}
+              </div>
+            </div>
+            <div>
+              <span className="text-gray-600">Dan Reeves Commission (7.5%):</span>
+              <div className="font-medium">
+                £{((formData.actualGbpReceived || 0) * 0.075).toFixed(2)}
+              </div>
+            </div>
+          </div>
+          {formData.isMarkCawstonLead && (
+            <div className="mt-2 text-xs text-blue-600">
+              * Mark Cawston lead - Higher BDR commission rate applies
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id="commissionPaid"
+            checked={formData.commissionPaid}
+            onCheckedChange={(checked) => setFormData({ ...formData, commissionPaid: !!checked })}
+          />
+          <Label htmlFor="commissionPaid">BDR Commission Paid</Label>
+        </div>
+
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id="danCommissionPaid"
+            checked={formData.danCommissionPaid}
+            onCheckedChange={(checked) => setFormData({ ...formData, danCommissionPaid: !!checked })}
+          />
+          <Label htmlFor="danCommissionPaid">Dan Commission Paid</Label>
+        </div>
       </div>
 
       <div className="space-y-2">

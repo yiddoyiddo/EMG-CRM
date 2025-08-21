@@ -5,7 +5,7 @@ import { Action, Resource } from '@prisma/client';
 import { triggerConversationEvent } from '@/lib/realtime';
 import sanitizeHtml from 'sanitize-html';
 
-interface Params { params: { id: string } }
+interface Params { params: Promise<{ id: string }> }
 
 const sanitizeOptions: sanitizeHtml.IOptions = {
   allowedTags: ['b','i','em','strong','a','code','pre','p','ul','ol','li','br'],
@@ -16,7 +16,8 @@ const sanitizeOptions: sanitizeHtml.IOptions = {
 };
 
 export async function PATCH(req: NextRequest, { params }: Params) {
-  const messageId = params.id;
+  const resolvedParams = await params;
+  const messageId = resolvedParams.id;
   try {
     const body = await req.json();
     const result = await withSecurity(Resource.MESSAGING, Action.UPDATE, async (context) => {
@@ -43,7 +44,8 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 }
 
 export async function DELETE(req: NextRequest, { params }: Params) {
-  const messageId = params.id;
+  const resolvedParams = await params;
+  const messageId = resolvedParams.id;
   try {
     await withSecurity(Resource.MESSAGING, Action.DELETE, async (context) => {
       const message = await prisma.message.findUnique({ where: { id: messageId } });

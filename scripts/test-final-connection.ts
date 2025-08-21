@@ -45,7 +45,7 @@ async function testFinalConnection() {
     
     console.log('\n🎉 Database is ready! You can now:');
     console.log('1. Start the development server with: npm run dev');
-    console.log('2. Login with: admin@emg.com / admin123');
+    console.log('2. Login with: admin@busenq.com / admin123');
     console.log('3. View your leads, pipeline, and finance data');
     
   } catch (error) {

@@ -8,7 +8,7 @@ async function testAdminLogin() {
     console.log('🧪 Testing admin login...');
 
     // Test credentials
-    const email = 'admin@emg.com';
+    const email = 'admin@busenq.com';
     const password = 'admin123';
 
     // Find the admin user

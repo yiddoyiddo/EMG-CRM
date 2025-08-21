@@ -18,6 +18,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import Link from 'next/link';
+import { useSession } from 'next-auth/react';
 
 interface FinanceAnalytics {
   totalRevenue: number;
@@ -40,11 +41,22 @@ interface FinanceAnalytics {
     pending: number;
     overdue: number;
   };
+  danCommissions: {
+    totalOwed: number;
+    totalPaid: number;
+    outstanding: number;
+    byStatus: { [key: string]: { owed: number; paid: number; outstanding: number } };
+    byMonth: Array<{ month: string; owed: number; paid: number; outstanding: number }>;
+  };
 }
 
 export function FinanceBoard() {
+  const { data: session } = useSession();
   const [analytics, setAnalytics] = useState<FinanceAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
+  
+  // BDRs should not see financial analytics on dashboard
+  const isBDR = session?.user?.role === 'BDR';
 
   const fetchAnalytics = async () => {
     try {
@@ -62,8 +74,42 @@ export function FinanceBoard() {
   };
 
   useEffect(() => {
-    fetchAnalytics();
-  }, []);
+    if (!isBDR) {
+      fetchAnalytics();
+    }
+  }, [isBDR]);
+  
+  // For BDRs, show a simple link to their finance data instead of analytics
+  if (isBDR) {
+    return (
+      <Card className="hover:shadow-lg transition-shadow flex flex-col h-full">
+        <CardHeader className="pb-3 flex-shrink-0">
+          <CardTitle className="flex items-center gap-2">
+            <DollarSign className="h-5 w-5" />
+            My Finance Data
+          </CardTitle>
+          <CardDescription>Access your financial transactions and commission data</CardDescription>
+        </CardHeader>
+        <CardContent className="text-sm text-muted-foreground flex-grow">
+          <div className="flex items-center justify-center py-8 text-center">
+            <div>
+              <DollarSign className="h-8 w-8 text-blue-400 mx-auto mb-2" />
+              <p className="text-gray-600">View your finance entries</p>
+              <p className="text-xs text-gray-500 mt-1">Monthly groups and commission tracking</p>
+            </div>
+          </div>
+        </CardContent>
+        <CardFooter className="flex-shrink-0">
+          <Link href="/finance" className="w-full">
+            <Button className="w-full" size="lg">
+              <DollarSign className="h-4 w-4 mr-2" />
+              View My Finance Data
+            </Button>
+          </Link>
+        </CardFooter>
+      </Card>
+    );
+  }
 
   const getTrendIcon = (value: number) => {
     if (value > 0) return <TrendingUp className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />;

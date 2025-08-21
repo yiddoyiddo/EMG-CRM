@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { startOfDay, endOfDay, parseISO } from 'date-fns';
+import { type Prisma } from '@prisma/client';
 
-export async function GET(request: Request, { params }: { params: { bdr: string } }) {
+export async function GET(request: Request, { params }: { params: Promise<{ bdr: string }> }) {
   try {
-    const { bdr } = params;
+    const resolvedParams = await params;
+    const { bdr } = resolvedParams;
     const { searchParams } = new URL(request.url);
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
@@ -15,7 +17,7 @@ export async function GET(request: Request, { params }: { params: { bdr: string 
       return NextResponse.json([], { status: 200 });
     }
 
-    const where: any = {
+    const where: Prisma.ActivityLogWhereInput = {
       bdrId: user.id,
     };
 

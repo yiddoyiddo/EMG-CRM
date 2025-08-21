@@ -347,6 +347,10 @@ export const financeEntrySchema = z.object({
   actualGbpReceived: z.number().optional().nullable(),
   notes: z.string().optional().nullable(),
   commissionPaid: z.boolean().default(false),
+  danCommissionPaid: z.boolean().default(false),
+  bdrCommissionAmount: z.number().optional().nullable(),
+  danCommissionAmount: z.number().optional().nullable(),
+  isMarkCawstonLead: z.boolean().default(false),
   month: z.string().regex(/^\d{4}-\d{2}$/, "Month must be in YYYY-MM format").default("2025-01")
 });
 

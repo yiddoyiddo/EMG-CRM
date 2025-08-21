@@ -174,24 +174,28 @@ model KpiTarget {
 }
 
 model FinanceEntry {
-  id                Int       @id @default(autoincrement())
-  company           String
-  bdrId             String
-  leadGen           Boolean   @default(false)
-  status            String
-  invoiceDate       DateTime?
-  dueDate           DateTime?
-  soldAmount        Float?
-  gbpAmount         Float?
-  exchangeRate      Float?
-  exchangeRateDate  DateTime?
-  actualGbpReceived Float?
-  notes             String?
-  commissionPaid    Boolean   @default(false)
-  month             String    @default("2025-01")
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  bdr               User      @relation(fields: [bdrId], references: [id])
+  id                    Int       @id @default(autoincrement())
+  company               String
+  bdrId                 String
+  leadGen               Boolean   @default(false)
+  status                String
+  invoiceDate           DateTime?
+  dueDate               DateTime?
+  soldAmount            Float?
+  gbpAmount             Float?
+  exchangeRate          Float?
+  exchangeRateDate      DateTime?
+  actualGbpReceived     Float?
+  notes                 String?
+  commissionPaid        Boolean   @default(false)
+  danCommissionPaid     Boolean   @default(false)
+  bdrCommissionAmount   Float?
+  danCommissionAmount   Float?
+  isMarkCawstonLead     Boolean   @default(false)
+  month                 String    @default("2025-01")
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  bdr                   User      @relation(fields: [bdrId], references: [id])
 
   @@index([status])
   @@index([invoiceDate])

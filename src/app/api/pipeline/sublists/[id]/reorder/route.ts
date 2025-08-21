@@ -5,10 +5,11 @@ const prisma = new PrismaClient();
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const sublistId = parseInt(params.id);
+    const resolvedParams = await params;
+    const sublistId = parseInt(resolvedParams.id);
     const body = await request.json();
     const { itemOrder } = body;
 

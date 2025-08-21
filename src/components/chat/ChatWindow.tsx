@@ -15,7 +15,13 @@ export function ChatWindow({ conversationId, currentUserId }: { conversationId: 
 
   useEffect(() => {
     const channel = subscribeToConversation(conversationId);
-    const handler = () => qc.invalidateQueries({ queryKey: ['messages', conversationId] });
+    const handler = () => {
+      qc.invalidateQueries({ queryKey: ['messages', conversationId] });
+      // Also trigger shim refresh if needed
+      if (qc._shimRefresh?.[conversationId]) {
+        qc._shimRefresh[conversationId]();
+      }
+    };
     channel.bind('message:new', handler);
     channel.bind('message:edit', handler);
     channel.bind('message:delete', handler);
@@ -62,23 +68,42 @@ export function ChatWindow({ conversationId, currentUserId }: { conversationId: 
     try {
       const res = await fetch(`/api/chat/conversations/${conversationId}/messages`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       if (!res.ok) throw new Error(await res.text());
+      
+      // Force immediate refresh of messages
       qc.invalidateQueries({ queryKey: ['messages', conversationId] });
+      qc.refetchQueries({ queryKey: ['messages', conversationId] });
+      
+      // Also trigger shim refresh for immediate update
+      if (qc._shimRefresh?.[conversationId]) {
+        qc._shimRefresh[conversationId]();
+      }
     } catch (e) {
       toast.error('Failed to send');
     }
   }
 
-  const messages = useMemo(() => (data?.pages?.flatMap((p: any) => p.messages) || []).slice().reverse(), [data]);
+  const messages = useMemo(() => {
+    const allMessages = data?.pages?.flatMap((p: any) => p.messages) || [];
+    // Remove duplicates based on message ID
+    const uniqueMessages = allMessages.reduce((acc: any[], message: any) => {
+      if (!acc.find(m => m.id === message.id)) {
+        acc.push(message);
+      }
+      return acc;
+    }, []);
+    return uniqueMessages.slice().reverse();
+  }, [data]);
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div ref={viewportRef} className="flex-1 overflow-y-auto p-2 md:p-3 space-y-2">
-        {messages.map((m: any) => (
-          <div key={m.id} className={`flex ${m.senderId === currentUserId ? 'justify-end' : 'justify-start'}`}>
-            <div className="max-w-[85%] sm:max-w-[70%]">
-              <MessageBubble message={m} isOwn={m.senderId === currentUserId} onEdited={() => qc.invalidateQueries({ queryKey: ['messages', conversationId] })} />
-            </div>
-          </div>
+      <div ref={viewportRef} className="flex-1 overflow-y-auto">
+        {messages.map((m: any, index: number) => (
+          <MessageBubble 
+            key={`${m.id}-${index}`} 
+            message={m} 
+            isOwn={m.senderId === currentUserId} 
+            onEdited={() => qc.invalidateQueries({ queryKey: ['messages', conversationId] })} 
+          />
         ))}
         {hasNextPage && (
           <button className="mx-auto my-2 block rounded border px-3 py-1 text-xs" disabled={isFetchingNextPage} onClick={()=>fetchNextPage()}>
@@ -87,7 +112,18 @@ export function ChatWindow({ conversationId, currentUserId }: { conversationId: 
         )}
       </div>
       {Object.keys(typingBy).filter((id) => id !== (currentUserId || '')).length > 0 && (
-        <div className="px-3 pb-2 text-xs text-muted-foreground">Someone is typing…</div>
+        <div className="px-6 py-3">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1">
+              <div className="flex space-x-1">
+                <div className="w-2 h-2 bg-muted-foreground rounded-full animate-pulse"></div>
+                <div className="w-2 h-2 bg-muted-foreground rounded-full animate-pulse [animation-delay:0.2s]"></div>
+                <div className="w-2 h-2 bg-muted-foreground rounded-full animate-pulse [animation-delay:0.4s]"></div>
+              </div>
+            </div>
+            <span className="text-sm text-muted-foreground">Someone is typing...</span>
+          </div>
+        </div>
       )}
       <MessageComposer conversationId={conversationId} onSend={onSend} onTyping={async()=>{ try{ await fetch('/api/chat/typing', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ conversationId }) }); } catch{} }} />
     </div>
@@ -104,20 +140,39 @@ function useInfiniteQueryShim(conversationId: string, qc: any) {
   const [cursor, setCursor] = useState<string | null>(null);
   const [hasNextPage, setHasNextPage] = useState(true);
   const [isFetchingNextPage, setIsFetchingNextPage] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  // Expose refresh function to query client
+  useEffect(() => {
+    if (!qc._shimRefresh) qc._shimRefresh = {};
+    qc._shimRefresh[conversationId] = () => setRefreshTrigger(prev => prev + 1);
+    return () => {
+      if (qc._shimRefresh) delete qc._shimRefresh[conversationId];
+    };
+  }, [conversationId, qc]);
 
   useEffect(() => {
     let cancelled = false;
+    // Reset state when conversation changes or refresh is triggered
+    setPages([]);
+    setCursor(null);
+    setHasNextPage(true);
+    
     (async () => {
-      const res = await fetch(`/api/chat/conversations/${conversationId}/messages` + (cursor ? `?cursor=${cursor}` : ''));
-      if (!res.ok) return;
-      const json = await res.json();
-      if (cancelled) return;
-      setPages((prev) => [...prev, json]);
-      setCursor(json.nextCursor);
-      setHasNextPage(!!json.nextCursor);
+      try {
+        const res = await fetch(`/api/chat/conversations/${conversationId}/messages`);
+        if (!res.ok) return;
+        const json = await res.json();
+        if (cancelled) return;
+        setPages([json]);
+        setCursor(json.nextCursor);
+        setHasNextPage(!!json.nextCursor);
+      } catch (error) {
+        console.error('Failed to fetch messages:', error);
+      }
     })();
     return () => { cancelled = true; };
-  }, [conversationId]);
+  }, [conversationId, refreshTrigger]);
 
   async function fetchNextPage() {
     if (!hasNextPage || isFetchingNextPage) return;

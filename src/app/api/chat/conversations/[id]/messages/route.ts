@@ -6,7 +6,7 @@ import { triggerConversationEvent } from '@/lib/realtime';
 import sanitizeHtml from 'sanitize-html';
 import { canSendMessage } from '@/lib/rate-limit';
 
-interface Params { params: { id: string } }
+interface Params { params: Promise<{ id: string }> }
 
 const sanitizeOptions: sanitizeHtml.IOptions = {
   allowedTags: ['b','i','em','strong','a','code','pre','p','ul','ol','li','br','span'],
@@ -32,7 +32,7 @@ async function resolveMentions(content: string) {
 
 // GET messages with cursor pagination
 export async function GET(req: NextRequest, { params }: Params) {
-  const { id } = params;
+  const { id } = await params;
   try {
     const url = new URL(req.url);
     const cursor = url.searchParams.get('cursor');
@@ -72,7 +72,7 @@ export async function GET(req: NextRequest, { params }: Params) {
 
 // POST send message
 export async function POST(req: NextRequest, { params }: Params) {
-  const { id } = params;
+  const { id } = await params;
   try {
     const body = await req.json();
     const data = await withSecurity(Resource.MESSAGING, Action.CREATE, async (context) => {
@@ -85,7 +85,8 @@ export async function POST(req: NextRequest, { params }: Params) {
         return NextResponse.json({ error: 'Rate limit' }, { status: 429 });
       }
 
-      let { content, attachments, parentId } = body as { content?: string; attachments?: Array<{ url: string; fileName: string; mimeType: string; size: number; width?: number; height?: number }>; parentId?: string };
+      let { content } = body as { content?: string; attachments?: Array<{ url: string; fileName: string; mimeType: string; size: number; width?: number; height?: number }>; parentId?: string };
+      const { attachments, parentId } = body as { content?: string; attachments?: Array<{ url: string; fileName: string; mimeType: string; size: number; width?: number; height?: number }>; parentId?: string };
       content = content ? await resolveMentions(content) : null as any;
       content = content ? sanitizeHtml(content, sanitizeOptions) : null as any;
 

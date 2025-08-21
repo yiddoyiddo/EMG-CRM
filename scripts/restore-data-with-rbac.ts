@@ -7,27 +7,27 @@ const prisma = new PrismaClient()
 const BDR_USER_MAPPING = {
   'Naeem Patel': {
     name: 'Naeem Patel',
-    email: 'naeem.patel@emg.com',
+    email: 'naeem.patel@busenq.com',
     role: 'BDR' as const
   },
   'Jennifer Davies': {
     name: 'Jennifer Davies', 
-    email: 'jennifer.davies@emg.com',
+    email: 'jennifer.davies@busenq.com',
     role: 'BDR' as const
   },
   'Mark Cawston': {
     name: 'Mark Cawston',
-    email: 'mark.cawston@emg.com', 
+    email: 'mark.cawston@busenq.com', 
     role: 'BDR' as const
   },
   'Rupert Kay': {
     name: 'Rupert Kay',
-    email: 'rupert.kay@emg.com',
+    email: 'rupert.kay@busenq.com',
     role: 'BDR' as const
   },
   'Verity Kay': {
     name: 'Verity Kay',
-    email: 'verity.kay@emg.com',
+    email: 'verity.kay@busenq.com',
     role: 'BDR' as const
   }
 }
@@ -175,7 +175,7 @@ async function main() {
   const adminUser = await prisma.user.create({
     data: {
       name: 'Admin User',
-      email: 'admin@emg.com',
+      email: 'admin@busenq.com',
       hashedPassword: 'temp_admin_password_' + Date.now(),
       role: 'ADMIN'
     }
@@ -197,7 +197,7 @@ async function main() {
   console.log('\n✅ Data restoration with RBAC migration completed successfully!')
   console.log('\n⚠️  Important Notes:')
   console.log('   - All users have temporary passwords that should be updated')
-  console.log('   - Admin user created with email: admin@emg.com')
+  console.log('   - Admin user created with email: admin@busenq.com')
   console.log('   - Review user emails and update as needed')
 }
 

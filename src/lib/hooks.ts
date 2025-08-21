@@ -831,7 +831,7 @@ export function useReorderSublistItems() {
 } 
 
 // Custom hook for managing BDRs
-export function useBdrManager() {
+export function useBdrManager(currentUserName?: string | null) {
   const [bdrs, setBdrs] = useState<string[]>(Array.from(leadBdrEnum));
   const [isAddingBdr, setIsAddingBdr] = useState(false);
 
@@ -849,10 +849,19 @@ export function useBdrManager() {
     }
   };
 
+  // Helper function to get default BDR based on current user
+  const getDefaultBdr = () => {
+    if (currentUserName && bdrs.includes(currentUserName)) {
+      return currentUserName;
+    }
+    return bdrs[0] || '';
+  };
+
   return {
     bdrs,
     addBdr,
     isAddingBdr,
-    setIsAddingBdr
+    setIsAddingBdr,
+    getDefaultBdr
   };
 } 

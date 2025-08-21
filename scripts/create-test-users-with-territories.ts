@@ -27,10 +27,10 @@ async function createTestUsers() {
     // Create admin user
     const hashedAdminPassword = await hashPassword('admin123');
     const admin = await prisma.user.upsert({
-      where: { email: 'admin@emgcrm.com' },
+      where: { email: 'admin@busenq.com' },
       update: {},
       create: {
-        email: 'admin@emgcrm.com',
+        email: 'admin@busenq.com',
         name: 'System Admin',
         hashedPassword: hashedAdminPassword,
         role: Role.ADMIN,
@@ -43,10 +43,10 @@ async function createTestUsers() {
     // Create director
     const hashedDirectorPassword = await hashPassword('director123');
     const director = await prisma.user.upsert({
-      where: { email: 'director@emgcrm.com' },
+      where: { email: 'director@busenq.com' },
       update: {},
       create: {
-        email: 'director@emgcrm.com',
+        email: 'director@busenq.com',
         name: 'Sales Director',
         hashedPassword: hashedDirectorPassword,
         role: Role.DIRECTOR,
@@ -59,10 +59,10 @@ async function createTestUsers() {
     // Create NA manager
     const hashedManagerPassword = await hashPassword('manager123');
     const naManager = await prisma.user.upsert({
-      where: { email: 'manager.na@emgcrm.com' },
+      where: { email: 'manager.na@busenq.com' },
       update: {},
       create: {
-        email: 'manager.na@emgcrm.com',
+        email: 'manager.na@busenq.com',
         name: 'NA Sales Manager',
         hashedPassword: hashedManagerPassword,
         role: Role.MANAGER,
@@ -81,10 +81,10 @@ async function createTestUsers() {
     // Create team lead in NA
     const hashedTeamLeadPassword = await hashPassword('teamlead123');
     const teamLead = await prisma.user.upsert({
-      where: { email: 'teamlead.na@emgcrm.com' },
+      where: { email: 'teamlead.na@busenq.com' },
       update: {},
       create: {
-        email: 'teamlead.na@emgcrm.com',
+        email: 'teamlead.na@busenq.com',
         name: 'NA Team Lead',
         hashedPassword: hashedTeamLeadPassword,
         role: Role.TEAM_LEAD,
@@ -97,22 +97,22 @@ async function createTestUsers() {
     // Create BDRs in different territories
     const bdrUsers = [
       { 
-        email: 'bdr1.na@emgcrm.com', 
+        email: 'bdr1.na@busenq.com', 
         name: 'John Smith', 
         territoryId: naTerritory.id 
       },
       { 
-        email: 'bdr2.na@emgcrm.com', 
+        email: 'bdr2.na@busenq.com', 
         name: 'Sarah Johnson', 
         territoryId: naTerritory.id 
       },
       { 
-        email: 'bdr1.eu@emgcrm.com', 
+        email: 'bdr1.eu@busenq.com', 
         name: 'Pierre Dubois', 
         territoryId: europeTerritory.id 
       },
       { 
-        email: 'bdr2.eu@emgcrm.com', 
+        email: 'bdr2.eu@busenq.com', 
         name: 'Anna Mueller', 
         territoryId: europeTerritory.id 
       }
@@ -176,10 +176,10 @@ async function createTestUsers() {
     });
 
     console.log('\n🔑 Login credentials:');
-    console.log('- Admin: admin@emgcrm.com / admin123');
-    console.log('- Director: director@emgcrm.com / director123');
-    console.log('- Manager: manager.na@emgcrm.com / manager123');
-    console.log('- Team Lead: teamlead.na@emgcrm.com / teamlead123');
+    console.log('- Admin: admin@busenq.com / admin123');
+    console.log('- Director: director@busenq.com / director123');
+    console.log('- Manager: manager.na@busenq.com / manager123');
+    console.log('- Team Lead: teamlead.na@busenq.com / teamlead123');
     console.log('- BDRs: [email] / bdr123');
 
     console.log('\n✨ Ready to test the granular permission system!');

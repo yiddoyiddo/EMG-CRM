@@ -3,11 +3,12 @@ import { prisma } from '@/lib/db';
 import { withSecurity, SecurityService } from '@/lib/security';
 import { Action, Resource } from '@prisma/client';
 
-interface Params { params: { id: string } }
+interface Params { params: Promise<{ id: string }> }
 
 // PATCH: rename/add/remove members (admin in conversation)
 export async function PATCH(req: NextRequest, { params }: Params) {
-  const { id } = params;
+  const resolvedParams = await params;
+  const { id } = resolvedParams;
   try {
     const body = await req.json();
     const result = await withSecurity(Resource.MESSAGING, Action.UPDATE, async (context) => {

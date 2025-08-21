@@ -72,9 +72,9 @@ async function processBackupData(backupData: any, filename: string) {
     }
   });
 
-  const fallbackAdmin = users.find(u => u.email === 'admin@emg.com');
+  const fallbackAdmin = users.find(u => u.email === 'admin@busenq.com');
   if (!fallbackAdmin) {
-      console.error(`❌ Fallback admin not found: admin@emg.com`);
+      console.error(`❌ Fallback admin not found: admin@busenq.com`);
       return;
   }
 

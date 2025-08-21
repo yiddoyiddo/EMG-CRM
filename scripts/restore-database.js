@@ -48,7 +48,7 @@ async function createUsersFromBackup() {
 
   // Create users for each BDR
   for (const bdrName of bdrNames) {
-    const email = `${bdrName.toLowerCase().replace(/\s+/g, '.')}@emg.com`;
+    const email = `${bdrName.toLowerCase().replace(/\s+/g, '.')}@busenq.com`;
     
     try {
       await prisma.user.upsert({
@@ -85,7 +85,7 @@ async function restoreLeads() {
       const bdrName = values[headers.indexOf('bdr')];
       
       if (bdrName && bdrName !== 'null' && bdrName !== '') {
-        const email = `${bdrName.toLowerCase().replace(/\s+/g, '.')}@emg.com`;
+        const email = `${bdrName.toLowerCase().replace(/\s+/g, '.')}@busenq.com`;
         const user = await prisma.user.findUnique({ where: { email } });
         
         if (user) {
@@ -133,7 +133,7 @@ async function restorePipelineItems() {
       const bdrName = values[headers.indexOf('bdr')];
       
       if (bdrName && bdrName !== 'null' && bdrName !== '') {
-        const email = `${bdrName.toLowerCase().replace(/\s+/g, '.')}@emg.com`;
+        const email = `${bdrName.toLowerCase().replace(/\s+/g, '.')}@busenq.com`;
         const user = await prisma.user.findUnique({ where: { email } });
         
         if (user) {
@@ -237,7 +237,7 @@ async function restoreActivityLogs() {
       const bdrName = values[headers.indexOf('bdr')];
       
       if (bdrName && bdrName !== 'null' && bdrName !== '') {
-        const email = `${bdrName.toLowerCase().replace(/\s+/g, '.')}@emg.com`;
+        const email = `${bdrName.toLowerCase().replace(/\s+/g, '.')}@busenq.com`;
         const user = await prisma.user.findUnique({ where: { email } });
         
         if (user) {
@@ -286,7 +286,7 @@ async function restoreFinanceEntries() {
       const bdrName = values[headers.indexOf('bdr')];
       
       if (bdrName && bdrName !== 'null' && bdrName !== '') {
-        const email = `${bdrName.toLowerCase().replace(/\s+/g, '.')}@emg.com`;
+        const email = `${bdrName.toLowerCase().replace(/\s+/g, '.')}@busenq.com`;
         const user = await prisma.user.findUnique({ where: { email } });
         
         if (user) {

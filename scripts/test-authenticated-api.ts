@@ -63,7 +63,7 @@ async function testAuthenticatedApi() {
     }
     
     console.log('\n🎯 Next steps:');
-    console.log('1. Make sure you are logged in as admin@emg.com');
+    console.log('1. Make sure you are logged in as admin@busenq.com');
     console.log('2. Check the browser console for any JavaScript errors');
     console.log('3. Try refreshing the page');
     console.log('4. Check the Network tab in browser dev tools to see API calls');

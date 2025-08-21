@@ -3,7 +3,7 @@
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Users, LineChart, TrendingUp, DollarSign, FileText } from 'lucide-react';
+import { Home, Users, LineChart, TrendingUp, DollarSign, FileText, Mail } from 'lucide-react';
 
 export function Navbar() {
   const pathname = usePathname();
@@ -17,7 +17,7 @@ export function Navbar() {
       <div className="flex gap-2 overflow-x-auto rounded-xl border border-white/20 dark:border-white/10 bg-white/60 dark:bg-white/[0.05] backdrop-blur p-1 shadow-[0_10px_30px_-20px_rgba(0,0,0,0.45)]">
         <Link href="/">
           <Button 
-            variant={isActive('/') && !isActive('/leads') && !isActive('/pipeline') && !isActive('/reporting') && !isActive('/finance') && !isActive('/editorial') ? 'default' : 'outline'} 
+            variant={isActive('/') && !isActive('/leads') && !isActive('/pipeline') && !isActive('/reporting') && !isActive('/finance') && !isActive('/editorial') && !isActive('/email-verification') ? 'default' : 'outline'} 
             size="sm" 
             className="flex items-center gap-1 whitespace-nowrap"
           >
@@ -73,6 +73,16 @@ export function Navbar() {
           >
             <TrendingUp className="h-4 w-4" />
             <span>Sales Performance</span>
+          </Button>
+        </Link>
+        <Link href="/email-verification">
+          <Button 
+            variant={isActive('/email-verification') ? 'default' : 'outline'} 
+            size="sm"
+            className="flex items-center gap-1 whitespace-nowrap"
+          >
+            <Mail className="h-4 w-4" />
+            <span>Email Verification</span>
           </Button>
         </Link>
       </div>

@@ -62,25 +62,40 @@ export function BDRKPIDashboard() {
       if (!session?.user || session.user.role !== 'BDR') return;
       
       try {
-        // In real implementation, this would be an API call
-        const mockMetrics: BDRMetrics = {
-          callsToday: 42,
-          callsTarget: 50,
-          callsWeek: 218,
-          callsWeekTarget: 250,
-          agreementsToday: 2,
-          agreementsWeek: 8,
-          agreementsWeekTarget: 10,
-          conversionRate: 7.3,
-          avgCallDuration: 4.2,
-          leadsAssigned: 45,
-          leadsContacted: 38,
-          followUpsScheduled: 12,
-          weeklyGoalProgress: 87,
-          monthlyRank: 3,
-          totalBDRs: 15,
-          streak: 5,
-          lastWeekPerformance: 95
+        // Fetch real data from the executive dashboard API (BDR users get their own data automatically)
+        const response = await fetch('/api/reporting/executive-dashboard');
+        if (!response.ok) {
+          throw new Error('Failed to fetch BDR metrics');
+        }
+        
+        const data = await response.json();
+        const dashboard = data.dashboard;
+        
+        if (!dashboard) {
+          throw new Error('No dashboard data received');
+        }
+        
+        // Transform executive dashboard data to BDR metrics format
+        const bdrMetrics: BDRMetrics = {
+          callsToday: dashboard.kpis?.thisWeek?.callVolume?.current || 0,
+          callsTarget: dashboard.kpis?.thisWeek?.callVolume?.target || 50,
+          callsWeek: dashboard.kpis?.thisWeek?.callVolume?.current || 0,
+          callsWeekTarget: dashboard.kpis?.thisWeek?.callVolume?.target || 250,
+          agreementsToday: dashboard.kpis?.thisWeek?.agreements?.current || 0,
+          agreementsWeek: dashboard.kpis?.thisWeek?.agreements?.current || 0,
+          agreementsWeekTarget: dashboard.kpis?.thisWeek?.agreements?.target || 10,
+          conversionRate: dashboard.kpis?.thisMonth?.conversionRate?.current || 0,
+          avgCallDuration: 4.2, // This would need to be calculated from actual call data
+          leadsAssigned: 45, // This would need to come from the leads API
+          leadsContacted: 38, // This would need to be calculated from lead activity
+          followUpsScheduled: 12, // This would need to be calculated from pipeline upcoming calls
+          weeklyGoalProgress: dashboard.kpis?.thisWeek?.callVolume?.current && dashboard.kpis?.thisWeek?.callVolume?.target 
+            ? Math.round((dashboard.kpis.thisWeek.callVolume.current / dashboard.kpis.thisWeek.callVolume.target) * 100)
+            : 0,
+          monthlyRank: 1, // This would need team comparison data
+          totalBDRs: dashboard.bdrList?.length || 1,
+          streak: 5, // This would need historical daily performance data
+          lastWeekPerformance: 95 // This would need to be calculated from previous week data
         };
 
         const mockAchievements: Achievement[] = [
@@ -143,7 +158,7 @@ export function BDRKPIDashboard() {
           }
         ];
 
-        setMetrics(mockMetrics);
+        setMetrics(bdrMetrics);
         setAchievements(mockAchievements);
         setRecentActivity(mockActivity);
       } catch (error) {

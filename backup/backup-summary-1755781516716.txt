@@ -1,0 +1,34 @@
+COMPREHENSIVE TEST DATA BACKUP SUMMARY
+Generated: 2025-08-21T13:05:18.791Z
+Backup File: comprehensive-test-data-backup-1755781516716.json
+
+RECORD COUNTS:
+Total Users: 17
+Total Leads: 3103
+Total Pipeline Items: 1507
+Total Activity Logs: 1610
+Total Finance Entries: 42
+Total Kpi Targets: 18
+Total Templates: 0
+Total Template Categories: 0
+Total Territories: 3
+Total Permissions: 80
+Total Audit Logs: 2148
+Total Editorial Items: 44
+Total Duplicate Warnings: 0
+Total Duplicate Matches: 0
+Total Duplicate Audit Logs: 0
+Total Conversations: 9
+Total Messages: 7
+Total Company Registries: 0
+Total Contact Registries: 0
+
+TOTAL RECORDS: 8588
+
+NOTES:
+- This backup contains ALL test data before deletion for user onboarding
+- Use the JSON file for full data restoration if needed
+- The backup includes all relationships and foreign key references
+- All data is preserved in its current state
+
+IMPORTANT: This backup should be kept safe as it contains all historical test data.

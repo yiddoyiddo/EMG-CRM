@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
 import { Button } from '@/components/ui/button';
 import { Navbar } from '@/components/ui/navbar';
+import { useSession } from 'next-auth/react';
 import {
   Select,
   SelectContent,
@@ -34,8 +35,9 @@ function ErrorFallback({ error, resetErrorBoundary }: { error: Error; resetError
 }
 
 function PipelineContent() {
-  const { bdrs, addBdr } = useBdrManager();
-  const [selectedBdr, setSelectedBdr] = useState<BdrType>(bdrs[0] || '');
+  const { data: session } = useSession();
+  const { bdrs, addBdr, getDefaultBdr } = useBdrManager(session?.user?.name);
+  const [selectedBdr, setSelectedBdr] = useState<BdrType>(getDefaultBdr());
   const [viewType, setViewType] = useState<ViewType>('board');
   const queryClient = useQueryClient();
 
@@ -65,6 +67,15 @@ function PipelineContent() {
     }
     return success;
   };
+
+  // Update selected BDR when session loads or BDRs change
+  useEffect(() => {
+    const defaultBdr = getDefaultBdr();
+    if (defaultBdr && selectedBdr !== defaultBdr) {
+      setSelectedBdr(defaultBdr);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.user?.name, bdrs, selectedBdr]);
 
   // Simple Mode for non-technical BDRs - start with default to avoid hydration mismatch
   const [simpleMode, setSimpleMode] = useState<boolean>(true);

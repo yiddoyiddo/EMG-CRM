@@ -33,11 +33,18 @@ export default function EditorialPage() {
     try {
       const response = await fetch('/api/users');
       if (!response.ok) {
+        // If we don't have permission to fetch users, just continue without BDR filtering
+        if (response.status === 403) {
+          console.warn('No permission to fetch users for BDR filtering');
+          return;
+        }
         throw new Error('Failed to fetch users');
       }
       
       const data = await response.json();
-      const bdrs = data.users
+      // Handle both response formats (data.users or users)
+      const users = data.data?.users || data.users || [];
+      const bdrs = users
         ?.filter((user: any) => ['BDR', 'TEAM_LEAD', 'MANAGER', 'DIRECTOR', 'ADMIN'].includes(user.role))
         ?.map((user: any) => ({
           id: user.id,

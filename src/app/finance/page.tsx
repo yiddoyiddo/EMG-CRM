@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Navbar } from '@/components/ui/navbar';
 import { FinanceTable } from '@/components/finance-table';
 import { FinanceForm } from '@/components/finance-form';
+import { LeadGenCommsBoard } from '@/components/lead-gen-comms-board';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -12,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Plus, DollarSign, TrendingUp, TrendingDown, Activity, AlertCircle, CheckCircle, Clock, BarChart3, PieChart, Target, HelpCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+import { useSession } from 'next-auth/react';
 
 interface FinanceEntry {
   id: number;
@@ -28,6 +30,10 @@ interface FinanceEntry {
   actualGbpReceived: number | null;
   notes: string | null;
   commissionPaid: boolean;
+  danCommissionPaid: boolean;
+  bdrCommissionAmount: number | null;
+  danCommissionAmount: number | null;
+  isMarkCawstonLead: boolean;
   month: string;
   createdAt: Date;
   updatedAt: Date;
@@ -54,9 +60,17 @@ interface FinanceAnalytics {
     pending: number;
     overdue: number;
   };
+  danCommissions: {
+    totalOwed: number;
+    totalPaid: number;
+    outstanding: number;
+    byStatus: { [key: string]: { owed: number; paid: number; outstanding: number } };
+    byMonth: Array<{ month: string; owed: number; paid: number; outstanding: number }>;
+  };
 }
 
 export default function FinancePage() {
+  const { data: session } = useSession();
   const [entries, setEntries] = useState<FinanceEntry[]>([]);
   const [groupedEntries, setGroupedEntries] = useState<{ [key: string]: FinanceEntry[] }>({});
   const [analytics, setAnalytics] = useState<FinanceAnalytics | null>(null);
@@ -64,7 +78,7 @@ export default function FinancePage() {
   const [analyticsLoading, setAnalyticsLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<FinanceEntry | null>(null);
-  const [viewMode, setViewMode] = useState<'analytics' | 'table' | 'groups'>('analytics');
+  const [viewMode, setViewMode] = useState<'analytics' | 'table' | 'groups'>('groups');
   const [pagination, setPagination] = useState({
     page: 1,
     pageSize: 10,
@@ -232,12 +246,27 @@ export default function FinancePage() {
     }).format(amount);
   };
 
+  // Determine if user is BDR and should have restricted access
+  const isBDR = session?.user?.role === 'BDR';
+  
+  // BDRs should only see Monthly Groups and Data Table, not Financial Analytics
+  const allowedTabs = isBDR ? ['groups', 'table'] : ['analytics', 'groups', 'table'];
+  
+  // Ensure BDRs are on a valid tab
+  useEffect(() => {
+    if (isBDR && viewMode === 'analytics') {
+      setViewMode('groups');
+    }
+  }, [isBDR, viewMode]);
+
   return (
     <div className="space-y-6">
       <Navbar />
       <div className="p-4 space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Finance Overview & Board</h1>
+          <h1 className="text-2xl font-bold">
+            {isBDR ? 'My Finance Data' : 'Finance Overview & Board'}
+          </h1>
           <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
             <DialogTrigger asChild>
               <Button>
@@ -259,13 +288,16 @@ export default function FinancePage() {
         </div>
 
         <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'analytics' | 'table' | 'groups')} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="analytics">Finance Analytics</TabsTrigger>
+          <TabsList className={`grid w-full ${isBDR ? 'grid-cols-2' : 'grid-cols-3'}`}>
+            {allowedTabs.includes('analytics') && (
+              <TabsTrigger value="analytics">Financial Analytics</TabsTrigger>
+            )}
             <TabsTrigger value="groups">Monthly Groups</TabsTrigger>
             <TabsTrigger value="table">Data Table</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="analytics" className="space-y-6">
+          {!isBDR && (
+            <TabsContent value="analytics" className="space-y-6">
             {analyticsLoading ? (
               <div className="flex items-center justify-center min-h-[400px]">
                 <div className="text-center">
@@ -381,6 +413,12 @@ export default function FinancePage() {
                     </CardContent>
                   </Card>
                 </div>
+
+                {/* Lead Gen Comms Section - Only visible to non-BDRs */}
+                <LeadGenCommsBoard 
+                  danCommissions={analytics.danCommissions}
+                  loading={analyticsLoading}
+                />
 
                 {/* Payment Status Overview */}
                 <Card>
@@ -557,6 +595,7 @@ export default function FinancePage() {
               </div>
             )}
           </TabsContent>
+          )}
         
           <TabsContent value="groups">
             <FinanceTable

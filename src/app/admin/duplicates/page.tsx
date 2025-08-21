@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -33,13 +33,12 @@ import {
   RefreshCw,
   Calendar,
   BarChart3,
-  AlertCircle,
 } from 'lucide-react';
-import { format, subDays, subMonths } from 'date-fns';
+import { format, subDays } from 'date-fns';
 import { WarningSeverity, DuplicateType, UserDecision } from '@prisma/client';
 import { useSession } from 'next-auth/react';
 import { redirect } from 'next/navigation';
-import { hasPermission } from '@/lib/permissions';
+import { hasPermission, type UserWithPermissions } from '@/lib/permissions';
 import { PERMISSIONS } from '@/lib/permissions';
 
 interface DuplicateStatistics {
@@ -92,20 +91,13 @@ export default function DuplicatesAdminPage() {
 
   // Check admin permissions
   useEffect(() => {
-    if (session && !hasPermission(session.user as any, PERMISSIONS.DUPLICATES.MANAGE.resource, PERMISSIONS.DUPLICATES.MANAGE.action) &&
-        !hasPermission(session.user as any, PERMISSIONS.DUPLICATES.VIEW_ALL.resource, PERMISSIONS.DUPLICATES.VIEW_ALL.action)) {
+    if (session && !hasPermission(session.user as UserWithPermissions, PERMISSIONS.DUPLICATES.MANAGE.resource, PERMISSIONS.DUPLICATES.MANAGE.action) &&
+        !hasPermission(session.user as UserWithPermissions, PERMISSIONS.DUPLICATES.VIEW_ALL.resource, PERMISSIONS.DUPLICATES.VIEW_ALL.action)) {
       redirect('/');
     }
   }, [session]);
 
-  // Fetch statistics and warnings
-  useEffect(() => {
-    if (session) {
-      fetchData();
-    }
-  }, [session, dateRange]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const dateFrom = dateRange === 'all' ? undefined : 
@@ -131,7 +123,14 @@ export default function DuplicatesAdminPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [dateRange]);
+
+  // Fetch statistics and warnings
+  useEffect(() => {
+    if (session) {
+      fetchData();
+    }
+  }, [session, fetchData]);
 
   const filteredWarnings = warnings.filter(warning => {
     const matchesSearch = !searchTerm || 

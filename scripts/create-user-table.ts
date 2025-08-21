@@ -37,12 +37,12 @@ async function createUserTable() {
     
     await prisma.$executeRaw`
       INSERT INTO "User" ("id", "name", "email", "hashedPassword", "role", "createdAt", "updatedAt")
-      VALUES (${adminId}, 'Admin User', 'admin@emg.com', ${hashedPassword}, 'ADMIN', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      VALUES (${adminId}, 'Admin User', 'admin@busenq.com', ${hashedPassword}, 'ADMIN', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     `;
     
     console.log('✅ Admin user created successfully');
     console.log('\nYou can now log in with:');
-    console.log('  - Username: admin@emg.com');
+    console.log('  - Username: admin@busenq.com');
     console.log('  - Password: admin123');
     
   } catch (error) {

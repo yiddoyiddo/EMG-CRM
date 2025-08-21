@@ -4,11 +4,11 @@ import { withSecurity, SecurityService } from '@/lib/security';
 import { Action, Resource } from '@prisma/client';
 import { triggerConversationEvent } from '@/lib/realtime';
 
-interface Params { params: { id: string } }
+interface Params { params: Promise<{ id: string }> }
 
 // Mark conversation as read by creating a read receipt on the latest message
 export async function POST(req: NextRequest, { params }: Params) {
-  const conversationId = params.id;
+  const conversationId = (await params).id;
   try {
     const result = await withSecurity(Resource.MESSAGING, Action.READ, async (context) => {
       const membership = await prisma.conversationMember.findUnique({

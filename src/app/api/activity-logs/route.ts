@@ -96,7 +96,7 @@ export async function GET(req: NextRequest) {
     });
     
     // Normalize response: return bdr as a string (name) to match frontend expectations
-    const normalizedLogs = logs.map((log: any) => ({
+    const normalizedLogs = logs.map((log) => ({
       ...log,
       bdr: log.bdr?.name || '',
     }));
@@ -138,7 +138,7 @@ export async function POST(req: NextRequest) {
     const validatedData = createActivityLogSchema.parse(data);
     
     // 3. Enforce Authorization (RBAC) for activity log creation
-    let activityData = { ...validatedData };
+    const activityData = { ...validatedData };
     
     if (role === Role.BDR) {
       // BDRs can only create activity logs assigned to themselves

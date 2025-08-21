@@ -188,7 +188,7 @@ function LoginFormComponent() {
                   Demo Credentials
                 </p>
                 <p className="text-sm text-center font-mono">
-                  <span className="font-medium">Email:</span> admin@emgcrm.com<br/>
+                  <span className="font-medium">Email:</span> admin@busenq.com<br/>
                   <span className="font-medium">Password:</span> admin123
                 </p>
               </div>

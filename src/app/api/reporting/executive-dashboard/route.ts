@@ -311,10 +311,10 @@ export async function GET(request: Request) {
     
     // Role-based data filtering
     if (role === Role.BDR) {
-      // BDRs can only see their own data
+      // BDRs can only see their own data - filter by bdrId (user relation)
       pipelineWhere.bdrId = userId;
       financeWhere.bdrId = userId;
-    } else if (role === Role.ADMIN) {
+    } else if (role === Role.ADMIN || role === Role.DIRECTOR || role === Role.MANAGER) {
       // Admins can see all data or filter by specific BDR
       if (bdr) {
         const targetUser = await prisma.user.findFirst({ where: { name: bdr }, select: { id: true } });
@@ -337,25 +337,33 @@ export async function GET(request: Request) {
       }
     };
 
-    // Role-based filtering for activity logs - bdr is a string field, not a relation
+    // Role-based filtering for activity logs - filter by bdrId (user relation)
     if (role === Role.BDR) {
-      // For BDRs, we need to find their name from userId and filter by that
-      // For now, skip this complex logic and show all data for BDRs 
-      // TODO: Implement proper BDR name lookup from User table
-    } else if (role === Role.ADMIN && bdr) {
-      // Filter by related User name
-      activityLogWhere.bdr = { name: bdr };
+      // BDRs can only see their own activity logs
+      activityLogWhere.bdrId = userId;
+    } else if ((role === Role.ADMIN || role === Role.DIRECTOR || role === Role.MANAGER) && bdr) {
+      // Filter by specific BDR user
+      const targetUser = await prisma.user.findFirst({ where: { name: bdr }, select: { id: true } });
+      if (targetUser) {
+        activityLogWhere.bdrId = targetUser.id;
+      } else {
+        activityLogWhere.bdrId = '___NO_MATCH___';
+      }
     }
 
     const leadWhere: any = {};
-    // Role-based filtering for leads - bdr is a string field, not a relation
+    // Role-based filtering for leads - filter by bdrId (user relation)
     if (role === Role.BDR) {
-      // For BDRs, we need to find their name from userId and filter by that
-      // For now, skip this complex logic and show all data for BDRs
-      // TODO: Implement proper BDR name lookup from User table  
-    } else if (role === Role.ADMIN && bdr) {
-      // Filter by related User name
-      leadWhere.bdr = { name: bdr };
+      // BDRs can only see their own leads
+      leadWhere.bdrId = userId;
+    } else if ((role === Role.ADMIN || role === Role.DIRECTOR || role === Role.MANAGER) && bdr) {
+      // Filter by specific BDR user (reuse targetUser from above)
+      const targetUser = await prisma.user.findFirst({ where: { name: bdr }, select: { id: true } });
+      if (targetUser) {
+        leadWhere.bdrId = targetUser.id;
+      } else {
+        leadWhere.bdrId = '___NO_MATCH___';
+      }
     }
 
     // Get comprehensive data with optimized queries

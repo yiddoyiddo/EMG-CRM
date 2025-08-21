@@ -23,7 +23,7 @@ The admin user couldn't see any leads, pipeline items, or data in the CRM system
 - Fixed NextAuth callbacks to include user role
 
 ### 3. Admin User Setup ✅
-- Created admin user: `admin@emg.com` with ADMIN role
+- Created admin user: `admin@busenq.com` with ADMIN role
 - Fixed password: `admin123`
 - Verified admin user can access all data
 
@@ -36,14 +36,14 @@ The admin user couldn't see any leads, pipeline items, or data in the CRM system
 
 ### Users (7 total)
 - **Admin Users (2)**
-  - `admin@emg.com` - Role: ADMIN ✅
+  - `admin@busenq.com` - Role: ADMIN ✅
   - `dan.reeves@busenq.com` - Role: ADMIN ✅
 - **BDR Users (5)**
-  - `naeem.patel@emg.com` - Role: BDR
-  - `jennifer.davies@emg.com` - Role: BDR
-  - `mark.cawston@emg.com` - Role: BDR
-  - `rupert.kay@emg.com` - Role: BDR
-  - `verity.kay@emg.com` - Role: BDR
+  - `naeem.patel@busenq.com` - Role: BDR
+  - `jennifer.davies@busenq.com` - Role: BDR
+  - `mark.cawston@busenq.com` - Role: BDR
+  - `rupert.kay@busenq.com` - Role: BDR
+  - `verity.kay@busenq.com` - Role: BDR
 
 ### Data
 - **Leads**: 325 ✅
@@ -54,7 +54,7 @@ The admin user couldn't see any leads, pipeline items, or data in the CRM system
 ## Login Credentials
 
 ### Admin User
-- **Email**: `admin@emg.com`
+- **Email**: `admin@busenq.com`
 - **Password**: `admin123`
 - **Role**: ADMIN
 - **Access**: Can see all leads, pipeline items, and activity logs
@@ -88,7 +88,7 @@ The admin user couldn't see any leads, pipeline items, or data in the CRM system
 npm run dev
 
 # Login with admin credentials
-Email: admin@emg.com
+Email: admin@busenq.com
 Password: admin123
 ```
 

@@ -4,10 +4,10 @@ import { withSecurity, SecurityService } from '@/lib/security';
 import { Action, Resource } from '@prisma/client';
 import { triggerConversationEvent } from '@/lib/realtime';
 
-interface Params { params: { id: string } }
+interface Params { params: Promise<{ id: string }> }
 
 export async function POST(req: NextRequest, { params }: Params) {
-  const messageId = params.id;
+  const messageId = (await params).id;
   try {
     const result = await withSecurity(Resource.MESSAGING, Action.READ, async (context) => {
       const message = await prisma.message.findUnique({ where: { id: messageId } });

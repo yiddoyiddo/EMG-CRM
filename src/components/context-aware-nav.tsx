@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 import { 
   Home, Users, LineChart, TrendingUp, Settings, Shield, 
   BarChart3, UserPlus, Calendar, Phone, Target, Award,
-  Briefcase, DollarSign, FileText, Bell, Search, Menu, BookOpen, MessageCircle
+  Briefcase, DollarSign, FileText, Bell, Search, Menu, BookOpen, MessageCircle, Mail
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -88,6 +88,13 @@ const navigationSections: NavSection[] = [
         description: 'BDR knowledgebase of reusable outreach templates'
       },
       {
+        title: 'Email Verification',
+        href: '/email-verification',
+        icon: Mail,
+        roles: ['ADMIN', 'DIRECTOR', 'MANAGER', 'TEAM_LEAD', 'BDR'],
+        description: 'Verify email addresses for validity'
+      },
+      {
         title: 'Call Schedule',
         href: '/pipeline?view=today',
         icon: Calendar,
@@ -146,25 +153,14 @@ const navigationSections: NavSection[] = [
         roles: ['ADMIN'],
         badge: 'Admin',
         description: 'Create and manage user accounts'
-      }
-    ]
-  },
-  {
-    title: 'Quick Actions',
-    items: [
-      {
-        title: 'Log Call',
-        href: '/pipeline?action=new',
-        icon: Phone,
-        roles: ['BDR', 'TEAM_LEAD'],
-        description: 'Quickly log a new call'
       },
       {
-        title: 'Add Lead',
-        href: '/leads?action=new',
-        icon: UserPlus,
-        roles: ['BDR', 'TEAM_LEAD', 'MANAGER'],
-        description: 'Add a new lead to the system'
+        title: 'Role Permissions',
+        href: '/admin/roles',
+        icon: Settings,
+        roles: ['ADMIN'],
+        badge: 'Admin',
+        description: 'Configure global role-based permissions'
       }
     ]
   }

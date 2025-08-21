@@ -61,7 +61,6 @@ export function LeadForm({ lead, onSubmit, onSaveAndAddToPipeline, isSubmitting 
     hasWarning,
   } = useDuplicateDetection({
     onDecisionMade: (decision, warningId) => {
-      console.log(`Duplicate decision: ${decision} for warning ${warningId}`);
     }
   });
 

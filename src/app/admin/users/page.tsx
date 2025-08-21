@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { useState } from 'react';
 import { format } from 'date-fns';
-import { UserPlus, Edit, Trash2, Shield, User as UserIcon, KeyRound } from 'lucide-react';
+import { UserPlus, Edit, Trash2, Shield, User as UserIcon, KeyRound, Settings } from 'lucide-react';
 import { toast } from 'sonner';
 async function fetchTerritories(): Promise<{ id: string; name: string }[]> {
   const res = await fetch('/api/territories');
@@ -51,6 +51,20 @@ interface UpdateUserForm {
   password?: string;
   role?: 'ADMIN' | 'DIRECTOR' | 'MANAGER' | 'TEAM_LEAD' | 'BDR';
   territoryId?: string | null;
+}
+
+interface UserPermission {
+  id: string;
+  resource: string;
+  action: string;
+  expiresAt: string | null;
+  createdAt: string;
+}
+
+interface AvailablePermission {
+  id: string;
+  resource: string;
+  action: string;
 }
 
 async function fetchUsers(): Promise<User[]> {
@@ -112,6 +126,7 @@ export default function UsersAdmin() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [resetPasswordDialogOpen, setResetPasswordDialogOpen] = useState(false);
+  const [permissionsDialogOpen, setPermissionsDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [newPassword, setNewPassword] = useState('');
   
@@ -124,6 +139,21 @@ export default function UsersAdmin() {
   });
   
   const [editForm, setEditForm] = useState<UpdateUserForm>({});
+  const [selectedUserForPermissions, setSelectedUserForPermissions] = useState<User | null>(null);
+  const [newPermissionResource, setNewPermissionResource] = useState('');
+  const [newPermissionAction, setNewPermissionAction] = useState('');
+  const [newPermissionExpiry, setNewPermissionExpiry] = useState('');
+
+  const { data: userPermissions = [], refetch: refetchPermissions } = useQuery({
+    queryKey: ['userPermissions', selectedUserForPermissions?.id],
+    queryFn: async () => {
+      if (!selectedUserForPermissions) return { userPermissions: [], availablePermissions: [] };
+      const res = await fetch(`/api/admin/users/${selectedUserForPermissions.id}/permissions`);
+      if (!res.ok) throw new Error('Failed to fetch permissions');
+      return res.json();
+    },
+    enabled: !!selectedUserForPermissions,
+  });
 
   const { data: users = [], isLoading } = useQuery({
     queryKey: ['users'],
@@ -179,6 +209,51 @@ export default function UsersAdmin() {
       setSelectedUser(null);
       setNewPassword('');
       toast.success('Password reset successfully');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+
+  const addPermissionMutation = useMutation({
+    mutationFn: async ({ userId, resource, action, expiresAt }: { userId: string; resource: string; action: string; expiresAt?: string }) => {
+      const res = await fetch(`/api/admin/users/${userId}/permissions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ resource, action, expiresAt }),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Failed to add permission');
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      refetchPermissions();
+      setNewPermissionResource('');
+      setNewPermissionAction('');
+      setNewPermissionExpiry('');
+      toast.success('Permission added successfully');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+
+  const removePermissionMutation = useMutation({
+    mutationFn: async ({ userId, permissionId }: { userId: string; permissionId: string }) => {
+      const res = await fetch(`/api/admin/users/${userId}/permissions?permissionId=${permissionId}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Failed to remove permission');
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      refetchPermissions();
+      toast.success('Permission removed successfully');
     },
     onError: (error: Error) => {
       toast.error(error.message);
@@ -259,6 +334,35 @@ export default function UsersAdmin() {
     resetPasswordMutation.mutate({ id: selectedUser.id, newPassword });
   };
 
+  const handleManagePermissions = (user: User) => {
+    setSelectedUserForPermissions(user);
+    setPermissionsDialogOpen(true);
+  };
+
+  const handleAddPermission = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedUserForPermissions || !newPermissionResource || !newPermissionAction) {
+      toast.error('Please select resource and action');
+      return;
+    }
+    addPermissionMutation.mutate({
+      userId: selectedUserForPermissions.id,
+      resource: newPermissionResource,
+      action: newPermissionAction,
+      expiresAt: newPermissionExpiry || undefined,
+    });
+  };
+
+  const handleRemovePermission = (permissionId: string) => {
+    if (!selectedUserForPermissions) return;
+    if (confirm('Are you sure you want to remove this permission?')) {
+      removePermissionMutation.mutate({
+        userId: selectedUserForPermissions.id,
+        permissionId,
+      });
+    }
+  };
+
   if (isLoading) {
     return <div className="p-6">Loading users...</div>;
   }
@@ -300,7 +404,7 @@ export default function UsersAdmin() {
                     type="email"
                     value={createForm.email}
                     onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
-                    placeholder="user@emg.com"
+                    placeholder="user@busenq.com"
                     required
                   />
                 </div>
@@ -336,14 +440,14 @@ export default function UsersAdmin() {
                  <div>
                    <Label htmlFor="create-territory">Territory (optional)</Label>
                    <Select
-                     value={createForm.territoryId || ''}
-                     onValueChange={(value) => setCreateForm({ ...createForm, territoryId: value || null })}
+                     value={createForm.territoryId || 'none'}
+                     onValueChange={(value) => setCreateForm({ ...createForm, territoryId: value === 'none' ? null : value })}
                    >
                      <SelectTrigger>
                        <SelectValue placeholder="Select a territory" />
                      </SelectTrigger>
                      <SelectContent>
-                       <SelectItem value="">None</SelectItem>
+                       <SelectItem value="none">None</SelectItem>
                        {territories.map(t => (
                          <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
                        ))}
@@ -416,6 +520,13 @@ export default function UsersAdmin() {
                       <Button
                         size="sm"
                         variant="outline"
+                        onClick={() => handleManagePermissions(user)}
+                      >
+                        <Settings className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
                         onClick={() => handleDelete(user)}
                         disabled={user._count.pipelineItems + user._count.leads + user._count.activityLogs > 0}
                       >
@@ -453,7 +564,7 @@ export default function UsersAdmin() {
                 type="email"
                 value={editForm.email || ''}
                 onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-                placeholder="user@emg.com"
+                placeholder="user@busenq.com"
               />
             </div>
             <div>
@@ -487,14 +598,14 @@ export default function UsersAdmin() {
               <div>
                 <Label htmlFor="edit-territory">Territory (optional)</Label>
                 <Select
-                  value={editForm.territoryId || ''}
-                  onValueChange={(value) => setEditForm({ ...editForm, territoryId: value || null })}
+                  value={editForm.territoryId || 'none'}
+                  onValueChange={(value) => setEditForm({ ...editForm, territoryId: value === 'none' ? null : value })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select a territory" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value="none">None</SelectItem>
                     {territories.map(t => (
                       <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
                     ))}
@@ -534,6 +645,123 @@ export default function UsersAdmin() {
               {resetPasswordMutation.isPending ? 'Resetting...' : 'Reset Password'}
             </Button>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Permissions Management Dialog */}
+      <Dialog open={permissionsDialogOpen} onOpenChange={setPermissionsDialogOpen}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Manage Permissions: {selectedUserForPermissions?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6">
+            {/* Current Permissions */}
+            <div>
+              <h3 className="font-medium mb-3">Current Permission Overrides</h3>
+              {userPermissions.userPermissions?.length > 0 ? (
+                <div className="space-y-2">
+                  {userPermissions.userPermissions.map((permission: UserPermission) => (
+                    <div key={permission.id} className="flex items-center justify-between p-3 border rounded">
+                      <div>
+                        <span className="font-medium">{permission.resource}</span>
+                        <span className="mx-2">·</span>
+                        <span className="text-gray-600">{permission.action}</span>
+                        {permission.expiresAt && (
+                          <span className="ml-2 text-sm text-orange-600">
+                            Expires: {format(new Date(permission.expiresAt), 'MMM dd, yyyy')}
+                          </span>
+                        )}
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleRemovePermission(permission.id)}
+                        disabled={removePermissionMutation.isPending}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-500 text-sm">No permission overrides. User has default role-based permissions only.</p>
+              )}
+            </div>
+
+            {/* Add New Permission */}
+            <div>
+              <h3 className="font-medium mb-3">Add Permission Override</h3>
+              <form onSubmit={handleAddPermission} className="space-y-4">
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <Label htmlFor="permission-resource">Resource</Label>
+                    <Select value={newPermissionResource} onValueChange={setNewPermissionResource}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select resource" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="FINANCE">Finance</SelectItem>
+                        <SelectItem value="LEADS">Leads</SelectItem>
+                        <SelectItem value="PIPELINE">Pipeline</SelectItem>
+                        <SelectItem value="USERS">Users</SelectItem>
+                        <SelectItem value="REPORTS">Reports</SelectItem>
+                        <SelectItem value="SETTINGS">Settings</SelectItem>
+                        <SelectItem value="ACTIVITY_LOGS">Activity Logs</SelectItem>
+                        <SelectItem value="DUPLICATES">Duplicates</SelectItem>
+                        <SelectItem value="MESSAGING">Messaging</SelectItem>
+                        <SelectItem value="TEMPLATES">Templates</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="permission-action">Action</Label>
+                    <Select value={newPermissionAction} onValueChange={setNewPermissionAction}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select action" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="CREATE">Create</SelectItem>
+                        <SelectItem value="READ">Read</SelectItem>
+                        <SelectItem value="UPDATE">Update</SelectItem>
+                        <SelectItem value="DELETE">Delete</SelectItem>
+                        <SelectItem value="VIEW_ALL">View All</SelectItem>
+                        <SelectItem value="VIEW_TEAM">View Team</SelectItem>
+                        <SelectItem value="EXPORT">Export</SelectItem>
+                        <SelectItem value="MANAGE">Manage</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="permission-expiry">Expiry Date (optional)</Label>
+                    <Input
+                      id="permission-expiry"
+                      type="date"
+                      value={newPermissionExpiry}
+                      onChange={(e) => setNewPermissionExpiry(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <Button type="submit" disabled={addPermissionMutation.isPending}>
+                  {addPermissionMutation.isPending ? 'Adding...' : 'Add Permission Override'}
+                </Button>
+              </form>
+            </div>
+
+            {/* Role-based Permissions Info */}
+            <div className="p-4 bg-gray-50 rounded">
+              <h4 className="font-medium text-sm mb-2">Role-based Permissions ({selectedUserForPermissions?.role})</h4>
+              <p className="text-sm text-gray-600">
+                {selectedUserForPermissions?.role === 'BDR' && 'BDRs can manage their own leads/pipeline, read finance data, and access messaging/templates.'}
+                {selectedUserForPermissions?.role === 'TEAM_LEAD' && 'Team Leads can manage team data, read finance, and access messaging/templates.'}
+                {selectedUserForPermissions?.role === 'MANAGER' && 'Managers can manage territory data, view team finance, and access most features.'}
+                {selectedUserForPermissions?.role === 'DIRECTOR' && 'Directors can view/manage most data across all territories.'}
+                {selectedUserForPermissions?.role === 'ADMIN' && 'Admins have full access to all features and data.'}
+              </p>
+              <p className="text-xs text-gray-500 mt-2">
+                Permission overrides add to (not replace) role-based permissions.
+              </p>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
