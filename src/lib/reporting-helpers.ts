@@ -14,7 +14,7 @@ export {
 import { getAllCallCompletions } from './reporting/call-analytics';
 
 
-export function calculateTeamPerformance(pipelineItems: any[], activityLogs: any[], financeEntries: any[] = []) {
+export function calculateTeamPerformance(pipelineItems: Record<string, any>[], activityLogs: Record<string, any>[], financeEntries: Record<string, any>[] = []) {
   // Get unique BDRs from the provided data
   const bdrSet = new Set<string>();
   pipelineItems.forEach(item => item.bdr?.name && bdrSet.add(item.bdr.name));
@@ -33,7 +33,6 @@ export function calculateTeamPerformance(pipelineItems: any[], activityLogs: any
   
   // Calculate individual BDR performance
   const bdrPerformance = allBDRs.map(bdr => {
-    const bdrItems = pipelineItems.filter(item => item.bdr?.name === bdr);
     const bdrActivities = activityLogs.filter(log => log.bdr?.name === bdr);
     const bdrFinanceEntries = financeEntries.filter(entry => entry.bdr?.name === bdr);
     
@@ -80,7 +79,7 @@ export function calculateTeamPerformance(pipelineItems: any[], activityLogs: any
   };
 }
 
-export function assessPipelineHealth(pipelineItems: any[], activityLogs: any[], currentDate: Date, financeEntries: any[] = []) {
+export function assessPipelineHealth(pipelineItems: Record<string, any>[], activityLogs: Record<string, any>[], currentDate: Date, financeEntries: Record<string, any>[] = []) {
   const now = currentDate;
   const nextWeekEnd = endOfWeek(addDays(now, 7), { weekStartsOn: 1 });
   const next2WeeksEnd = endOfWeek(addDays(now, 14), { weekStartsOn: 1 });
@@ -182,7 +181,7 @@ export function assessPipelineHealth(pipelineItems: any[], activityLogs: any[], 
   };
 }
 
-export function calculateTrends(pipelineItems: any[], activityLogs: any[], currentDate: Date, financeEntries: any[] = []) {
+export function calculateTrends(pipelineItems: Record<string, any>[], activityLogs: Record<string, any>[], currentDate: Date, financeEntries: Record<string, any>[] = []) {
   const now = currentDate;
   
   // Weekly call volume trend (last 4 weeks) - use enhanced call completion logic
@@ -261,7 +260,7 @@ export function calculateTrends(pipelineItems: any[], activityLogs: any[], curre
   };
 }
 
-export function identifyCriticalActions(pipelineItems: any[], activityLogs: any[], teamPerformance: any, currentDate: Date): Array<{
+export function identifyCriticalActions(pipelineItems: Record<string, any>[], activityLogs: Record<string, any>[], teamPerformance: Record<string, any>, currentDate: Date): Array<{
   priority: 'urgent' | 'high' | 'medium';
   category: 'calls' | 'agreements' | 'lists' | 'team';
   action: string;
@@ -341,7 +340,7 @@ export function identifyCriticalActions(pipelineItems: any[], activityLogs: any[
   });
 }
 
-export function calculateFinancialSummary(pipelineItems: any[], activityLogs: any[], currentDate: Date, financeEntries: any[] = []) {
+export function calculateFinancialSummary(pipelineItems: Record<string, any>[], activityLogs: Record<string, any>[], currentDate: Date, financeEntries: Record<string, any>[] = []) {
   const now = currentDate;
   const thisMonthStart = startOfMonth(now);
   const thisQuarterStart = startOfQuarter(now);
@@ -375,7 +374,7 @@ export function calculateFinancialSummary(pipelineItems: any[], activityLogs: an
   };
 }
 
-export function generatePredictiveInsights(pipelineItems: any[], activityLogs: any[], trends: any, currentDate: Date) {
+export function generatePredictiveInsights(pipelineItems: Record<string, any>[], activityLogs: Record<string, any>[], trends: Record<string, any>, currentDate: Date) {
   const now = currentDate;
   
   // Simple predictions based on current trends

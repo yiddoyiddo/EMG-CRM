@@ -6,11 +6,6 @@ import { hasPermission } from '@/lib/permissions';
 import { PERMISSIONS } from '@/lib/permissions';
 import { z } from 'zod';
 
-// Request schema for statistics
-const statisticsSchema = z.object({
-  dateFrom: z.string().datetime().optional(),
-  dateTo: z.string().datetime().optional(),
-});
 
 // GET endpoint for duplicate statistics and management data
 export async function GET(request: NextRequest) {
@@ -22,8 +17,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Check admin permissions
-    if (!hasPermission(session.user as any, PERMISSIONS.DUPLICATES.MANAGE.resource, PERMISSIONS.DUPLICATES.MANAGE.action) &&
-        !hasPermission(session.user as any, PERMISSIONS.DUPLICATES.VIEW_ALL.resource, PERMISSIONS.DUPLICATES.VIEW_ALL.action)) {
+    if (!hasPermission(session.user as { id: string; role: string; territoryId?: string | null }, PERMISSIONS.DUPLICATES.MANAGE.resource, PERMISSIONS.DUPLICATES.MANAGE.action) &&
+        !hasPermission(session.user as { id: string; role: string; territoryId?: string | null }, PERMISSIONS.DUPLICATES.VIEW_ALL.resource, PERMISSIONS.DUPLICATES.VIEW_ALL.action)) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 

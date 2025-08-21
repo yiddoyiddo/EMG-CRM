@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
     const pageSize = parseInt(searchParams.get('pageSize') || '50', 10);
     const skip = (page - 1) * pageSize;
 
-    const where: any = {};
+    const where: Record<string, any> = {};
     if (search) {
       where.OR = [
         { name: { contains: search, mode: 'insensitive' } },
@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
       where.bdrId = targetUser ? targetUser.id : '___NO_MATCH___';
     }
 
-    const baseQuery: any = {
+    const baseQuery: Record<string, any> = {
       where,
       skip,
       take: pageSize,
@@ -55,7 +55,7 @@ export async function GET(req: NextRequest) {
       prisma.pipelineItem.count(countQuery),
     ]);
 
-    const mapItem = (item: any): any => ({
+    const mapItem = (item: any): Record<string, any> => ({
       id: item.id,
       name: item.name,
       title: item.title,

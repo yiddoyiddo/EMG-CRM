@@ -8,7 +8,7 @@ interface RouteParams {
 }
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
-  return withSecurity(Resource.USERS, Action.READ, async (context) => {
+  return withSecurity(Resource.USERS, Action.READ, async () => {
     const resolvedParams = await params;
     const userId = resolvedParams.id;
     
@@ -109,7 +109,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 }
 
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
-  return withSecurity(Resource.USERS, Action.MANAGE, async (context) => {
+  return withSecurity(Resource.USERS, Action.MANAGE, async () => {
     const resolvedParams = await params;
     const userId = resolvedParams.id;
     const { searchParams } = new URL(request.url);

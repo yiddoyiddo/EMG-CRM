@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Plus, DollarSign, TrendingUp, TrendingDown, Activity, AlertCircle, CheckCircle, Clock, BarChart3, PieChart, Target, HelpCircle } from 'lucide-react';
+import { Plus, DollarSign, TrendingUp, TrendingDown, Activity, AlertCircle, Clock, BarChart3, PieChart, Target, HelpCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { useSession } from 'next-auth/react';
 
@@ -107,7 +107,7 @@ export default function FinancePage() {
     }
   };
 
-  const convertDateStrings = (entries: any[]): FinanceEntry[] => {
+  const convertDateStrings = (entries: Record<string, any>[]): FinanceEntry[] => {
     return entries.map(entry => ({
       ...entry,
       invoiceDate: entry.invoiceDate ? new Date(entry.invoiceDate) : null,
@@ -118,10 +118,10 @@ export default function FinancePage() {
     }));
   };
 
-  const convertGroupedEntries = (groupedData: any): { [key: string]: FinanceEntry[] } => {
+  const convertGroupedEntries = (groupedData: Record<string, any>): { [key: string]: FinanceEntry[] } => {
     const converted: { [key: string]: FinanceEntry[] } = {};
     for (const [key, entries] of Object.entries(groupedData)) {
-      converted[key] = convertDateStrings(entries as any[]);
+      converted[key] = convertDateStrings(entries as Record<string, any>[]);
     }
     return converted;
   };
@@ -224,14 +224,6 @@ export default function FinancePage() {
     setPagination(prev => ({ ...prev, page: 1 }));
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Paid': return 'text-green-600 bg-green-50 border-green-200';
-      case 'Pending': return 'text-yellow-600 bg-yellow-50 border-yellow-200';
-      case 'Overdue': return 'text-red-600 bg-red-50 border-red-200';
-      default: return 'text-gray-600 bg-gray-50 border-gray-200';
-    }
-  };
 
   const getTrendIcon = (value: number) => {
     if (value > 0) return <TrendingUp className="h-4 w-4 text-green-600" />;
@@ -321,7 +313,7 @@ export default function FinancePage() {
                           </TooltipTrigger>
                           <TooltipContent className="max-w-xs">
                             <p><strong>What it measures:</strong> Total revenue generated from January 1st to current date</p>
-                            <p><strong>How it's calculated:</strong> Sum of all 'gbpAmount' fields from finance entries where invoiceDate is within current year</p>
+                            <p><strong>How it&apos;s calculated:</strong> Sum of all &apos;gbpAmount&apos; fields from finance entries where invoiceDate is within current year</p>
                             <p><strong>Monthly trend:</strong> Growth percentage compared to previous month revenue</p>
                           </TooltipContent>
                         </Tooltip>
@@ -346,8 +338,8 @@ export default function FinancePage() {
                           </TooltipTrigger>
                           <TooltipContent className="max-w-xs">
                             <p><strong>What it measures:</strong> Average financial value per completed deal</p>
-                            <p><strong>How it's calculated:</strong> Total revenue (gbpAmount) ÷ Total number of finance entries</p>
-                            <p><strong>Conversion rate:</strong> Percentage of deals with 'Paid' status out of total deals</p>
+                            <p><strong>How it&apos;s calculated:</strong> Total revenue (gbpAmount) ÷ Total number of finance entries</p>
+                            <p><strong>Conversion rate:</strong> Percentage of deals with &apos;Paid&apos; status out of total deals</p>
                             <p><strong>Use case:</strong> Helps identify deal quality and pricing strategy effectiveness</p>
                           </TooltipContent>
                         </Tooltip>
@@ -372,7 +364,7 @@ export default function FinancePage() {
                           </TooltipTrigger>
                           <TooltipContent className="max-w-xs">
                             <p><strong>What it measures:</strong> Average number of days payments are overdue</p>
-                            <p><strong>How it's calculated:</strong> For entries with 'Overdue' status, calculate days between dueDate and today, then average</p>
+                            <p><strong>How it&apos;s calculated:</strong> For entries with &apos;Overdue&apos; status, calculate days between dueDate and today, then average</p>
                             <p><strong>Payment time:</strong> Average days from invoice to payment for completed transactions</p>
                             <p><strong>Cash flow indicator:</strong> Lower numbers indicate better cash flow management</p>
                           </TooltipContent>
@@ -398,7 +390,7 @@ export default function FinancePage() {
                           </TooltipTrigger>
                           <TooltipContent className="max-w-xs">
                             <p><strong>What it measures:</strong> Revenue growth percentage from previous month</p>
-                            <p><strong>How it's calculated:</strong> ((Current month revenue - Previous month revenue) ÷ Previous month revenue) × 100</p>
+                            <p><strong>How it&apos;s calculated:</strong> ((Current month revenue - Previous month revenue) ÷ Previous month revenue) × 100</p>
                             <p><strong>Quarterly context:</strong> {formatCurrency(analytics.quarterlyRevenue)} revenue this quarter</p>
                             <p><strong>Growth indicators:</strong> Positive = growth, Negative = decline, 0 = flat</p>
                           </TooltipContent>
@@ -534,7 +526,7 @@ export default function FinancePage() {
                         </TooltipTrigger>
                         <TooltipContent className="max-w-xs">
                           <p><strong>What it shows:</strong> Revenue and deal volume patterns over the last 6 months</p>
-                          <p><strong>How it's calculated:</strong> Finance entries grouped by month field, summing gbpAmount per month</p>
+                          <p><strong>How it&apos;s calculated:</strong> Finance entries grouped by month field, summing gbpAmount per month</p>
                           <p><strong>Progress bars:</strong> Relative to highest revenue month in the period</p>
                           <p><strong>Deal volume:</strong> Count of finance entries per month</p>
                           <p><strong>Use case:</strong> Identify seasonal patterns, growth trends, and forecasting</p>

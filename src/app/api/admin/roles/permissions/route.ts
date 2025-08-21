@@ -4,7 +4,7 @@ import { withSecurity } from '@/lib/security';
 import { Resource, Action, Role } from '@prisma/client';
 
 export async function GET(request: NextRequest) {
-  return withSecurity(Resource.SETTINGS, Action.MANAGE, async (context) => {
+  return withSecurity(Resource.SETTINGS, Action.MANAGE, async () => {
     // Get all current role permissions
     const rolePermissions = await prisma.rolePermission.findMany({
       include: {
@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
         description: rp.permission.description
       });
       return acc;
-    }, {} as Record<Role, any[]>);
+    }, {} as Record<Role, Array<{ id: string; name: string; resource: string; action: string; description: string | null }>>);
 
     return NextResponse.json({
       rolePermissions: permissionsByRole,
@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  return withSecurity(Resource.SETTINGS, Action.MANAGE, async (context) => {
+  return withSecurity(Resource.SETTINGS, Action.MANAGE, async () => {
     const body = await request.json();
     const { role, permissionId } = body;
 
@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  return withSecurity(Resource.SETTINGS, Action.MANAGE, async (context) => {
+  return withSecurity(Resource.SETTINGS, Action.MANAGE, async () => {
     const { searchParams } = new URL(request.url);
     const role = searchParams.get('role');
     const permissionId = searchParams.get('permissionId');
@@ -136,7 +136,7 @@ export async function DELETE(request: NextRequest) {
 
 // Bulk update endpoint for better UX
 export async function PATCH(request: NextRequest) {
-  return withSecurity(Resource.SETTINGS, Action.MANAGE, async (context) => {
+  return withSecurity(Resource.SETTINGS, Action.MANAGE, async () => {
     const body = await request.json();
     const { role, permissionIds } = body;
 

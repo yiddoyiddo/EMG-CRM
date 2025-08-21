@@ -1,5 +1,3 @@
-import { NextRequest } from 'next/server';
-import { lookup as lookupMime } from 'mime-types';
 
 export type AllowedUpload = {
   mime: string;

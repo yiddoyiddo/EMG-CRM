@@ -107,7 +107,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
 
     // Prepare update data
-    const updateData: any = {};
+    const updateData: Record<string, any> = {};
     if (validatedData.name !== undefined) updateData.name = validatedData.name;
     if (validatedData.email !== undefined) updateData.email = validatedData.email;
     if (validatedData.role !== undefined) updateData.role = validatedData.role as Role;

@@ -64,8 +64,8 @@ export async function GET(req: NextRequest, { params }: Params) {
     }, req);
 
     return NextResponse.json(data);
-  } catch (err: any) {
-    await SecurityService.logAction({ action: 'READ', resource: 'MESSAGING', resourceId: id, success: false, errorMsg: err?.message }, req);
+  } catch (err: unknown) {
+    await SecurityService.logAction({ action: 'READ', resource: 'MESSAGING', resourceId: id, success: false, errorMsg: err instanceof Error ? err.message : 'Unknown error' }, req);
     return NextResponse.json({ error: 'Failed to fetch messages' }, { status: 400 });
   }
 }
@@ -87,8 +87,8 @@ export async function POST(req: NextRequest, { params }: Params) {
 
       let { content } = body as { content?: string; attachments?: Array<{ url: string; fileName: string; mimeType: string; size: number; width?: number; height?: number }>; parentId?: string };
       const { attachments, parentId } = body as { content?: string; attachments?: Array<{ url: string; fileName: string; mimeType: string; size: number; width?: number; height?: number }>; parentId?: string };
-      content = content ? await resolveMentions(content) : null as any;
-      content = content ? sanitizeHtml(content, sanitizeOptions) : null as any;
+      content = content ? await resolveMentions(content) : null;
+      content = content ? sanitizeHtml(content, sanitizeOptions) : null;
 
       const message = await prisma.message.create({
         data: {
@@ -119,8 +119,8 @@ export async function POST(req: NextRequest, { params }: Params) {
 
     if (data instanceof NextResponse) return data;
     return NextResponse.json({ message: data }, { status: 201 });
-  } catch (err: any) {
-    await SecurityService.logAction({ action: 'CREATE', resource: 'MESSAGING', resourceId: id, success: false, errorMsg: err?.message }, req);
+  } catch (err: unknown) {
+    await SecurityService.logAction({ action: 'CREATE', resource: 'MESSAGING', resourceId: id, success: false, errorMsg: err instanceof Error ? err.message : 'Unknown error' }, req);
     return NextResponse.json({ error: 'Failed to send message' }, { status: 400 });
   }
 }

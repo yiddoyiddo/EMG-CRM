@@ -27,7 +27,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       // Only admin can rename, add/remove, or lock
       if (!isAdmin) throw new Error('Forbidden');
 
-      const updates: any = {};
+      const updates: Record<string, any> = {};
       if (typeof name === 'string') updates.name = name || null;
       if (typeof lock === 'boolean') updates.isLocked = lock;
 
@@ -51,15 +51,15 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       return tx;
     }, req);
     return NextResponse.json({ conversation: result });
-  } catch (err: any) {
-    await SecurityService.logAction({ action: 'UPDATE', resource: 'MESSAGING', resourceId: params.id, success: false, errorMsg: err?.message }, req);
+  } catch (err: unknown) {
+    await SecurityService.logAction({ action: 'UPDATE', resource: 'MESSAGING', resourceId: (await params).id, success: false, errorMsg: err instanceof Error ? err.message : 'Unknown error' }, req);
     return NextResponse.json({ error: 'Failed to update conversation' }, { status: 400 });
   }
 }
 
 // DELETE: admin-only
 export async function DELETE(req: NextRequest, { params }: Params) {
-  const { id } = params;
+  const { id } = await params;
   try {
     await withSecurity(Resource.MESSAGING, Action.MANAGE, async (context) => {
       const membership = await prisma.conversationMember.findUnique({
@@ -71,8 +71,8 @@ export async function DELETE(req: NextRequest, { params }: Params) {
       await prisma.conversationMember.deleteMany({ where: { conversationId: id } });
     }, req);
     return NextResponse.json({ ok: true });
-  } catch (err: any) {
-    await SecurityService.logAction({ action: 'DELETE', resource: 'MESSAGING', resourceId: id, success: false, errorMsg: err?.message }, req);
+  } catch (err: unknown) {
+    await SecurityService.logAction({ action: 'DELETE', resource: 'MESSAGING', resourceId: (await params).id, success: false, errorMsg: err instanceof Error ? err.message : 'Unknown error' }, req);
     return NextResponse.json({ error: 'Failed to delete conversation' }, { status: 400 });
   }
 }

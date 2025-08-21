@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { SecurityService, withSecurity } from '@/lib/security';
+import { withSecurity } from '@/lib/security';
 import { prisma } from '@/lib/db';
 import { Resource, Action } from '@prisma/client';
 
@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
     const endDate = searchParams.get('endDate');
 
     // Build where clause based on user permissions and filters
-    let where: any = {};
+    const where: Record<string, unknown> = {};
 
     // Apply row-level security for audit logs
     if (context.role === 'BDR' || context.role === 'TEAM_LEAD') {
@@ -82,7 +82,7 @@ export async function GET(req: NextRequest) {
 
     // Sanitize sensitive data based on user role
     const sanitizedLogs = auditLogs.map(log => {
-      const sanitized: any = {
+      const sanitized: Record<string, unknown> = {
         id: log.id,
         action: log.action,
         resource: log.resource,
@@ -133,7 +133,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Build base where clause for time range
-    let where: any = {};
+    const where: Record<string, unknown> = {};
     if (startDate || endDate) {
       where.timestamp = {};
       if (startDate) where.timestamp.gte = new Date(startDate);

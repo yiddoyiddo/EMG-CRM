@@ -61,11 +61,6 @@ interface UserPermission {
   createdAt: string;
 }
 
-interface AvailablePermission {
-  id: string;
-  resource: string;
-  action: string;
-}
 
 async function fetchUsers(): Promise<User[]> {
   const res = await fetch('/api/admin/users');
@@ -423,7 +418,7 @@ export default function UsersAdmin() {
                   <Label htmlFor="create-role">Role</Label>
                   <Select
                     value={createForm.role}
-                     onValueChange={(value: any) => setCreateForm({ ...createForm, role: value })}
+                     onValueChange={(value: 'ADMIN' | 'DIRECTOR' | 'MANAGER' | 'TEAM_LEAD' | 'BDR') => setCreateForm({ ...createForm, role: value })}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -581,7 +576,7 @@ export default function UsersAdmin() {
               <Label htmlFor="edit-role">Role</Label>
               <Select
                 value={editForm.role || 'BDR'}
-                onValueChange={(value: any) => setEditForm({ ...editForm, role: value })}
+                onValueChange={(value: 'ADMIN' | 'DIRECTOR' | 'MANAGER' | 'TEAM_LEAD' | 'BDR') => setEditForm({ ...editForm, role: value })}
               >
                 <SelectTrigger>
                   <SelectValue />

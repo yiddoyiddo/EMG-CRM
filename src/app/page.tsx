@@ -320,7 +320,7 @@ export default function ReportingPage() {
                           </TooltipTrigger>
                           <TooltipContent className="max-w-xs">
                             <p><strong>What it measures:</strong> Total completed calls this week</p>
-                            <p><strong>How it's calculated:</strong> Count of activity logs with type "Call_Completed" within the current week</p>
+                            <p><strong>How it&apos;s calculated:</strong> Count of activity logs with type &quot;Call_Completed&quot; within the current week</p>
                             <p><strong>Target levels:</strong> Excellent: 125%+ of target, Good: 100%+ of target, Needs Attention: 50%+ of target, Critical: Below 50%</p>
                           </TooltipContent>
                         </Tooltip>
@@ -355,7 +355,7 @@ export default function ReportingPage() {
                           </TooltipTrigger>
                           <TooltipContent className="max-w-xs">
                             <p><strong>What it measures:</strong> Total agreements sent this week</p>
-                            <p><strong>How it's calculated:</strong> Count of activity logs with type "Agreement_Sent" within the current week</p>
+                            <p><strong>How it&apos;s calculated:</strong> Count of activity logs with type &quot;Agreement_Sent&quot; within the current week</p>
                             <p><strong>Target levels:</strong> Excellent: 125%+ of target, Good: 100%+ of target, Needs Attention: 50%+ of target, Critical: Below 50%</p>
                           </TooltipContent>
                         </Tooltip>
@@ -390,7 +390,7 @@ export default function ReportingPage() {
                           </TooltipTrigger>
                           <TooltipContent className="max-w-xs">
                             <p><strong>What it measures:</strong> Total partner lists sent this week</p>
-                            <p><strong>How it's calculated:</strong> Count of activity logs with type "Partner_List_Sent" within the current week</p>
+                            <p><strong>How it&apos;s calculated:</strong> Count of activity logs with type &quot;Partner_List_Sent&quot; within the current week</p>
                             <p><strong>Target levels:</strong> Excellent: 125%+ of target, Good: 100%+ of target, Needs Attention: 50%+ of target, Critical: Below 50%</p>
                           </TooltipContent>
                         </Tooltip>
@@ -425,7 +425,7 @@ export default function ReportingPage() {
                           </TooltipTrigger>
                           <TooltipContent className="max-w-xs">
                             <p><strong>What it measures:</strong> Total sales this week</p>
-                            <p><strong>How it's calculated:</strong> Count of pipeline items with sales indicators or 'Sold' status updated this week</p>
+                            <p><strong>How it&apos;s calculated:</strong> Count of pipeline items with sales indicators or &apos;Sold&apos; status updated this week</p>
                             <p><strong>Target levels:</strong> Excellent: 125%+ of target, Good: 100%+ of target, Needs Attention: 50%+ of target, Critical: Below 50%</p>
                           </TooltipContent>
                         </Tooltip>
@@ -466,7 +466,7 @@ export default function ReportingPage() {
                           </TooltipTrigger>
                           <TooltipContent className="max-w-xs">
                             <p><strong>What it measures:</strong> Total completed calls last week</p>
-                            <p><strong>How it's calculated:</strong> Count of activity logs with type "Call_Completed" within last week</p>
+                            <p><strong>How it&apos;s calculated:</strong> Count of activity logs with type &quot;Call_Completed&quot; within last week</p>
                             <p><strong>Target levels:</strong> Excellent: 125%+ of target, Good: 100%+ of target, Needs Attention: 50%+ of target, Critical: Below 50%</p>
                           </TooltipContent>
                         </Tooltip>
@@ -495,7 +495,7 @@ export default function ReportingPage() {
                           </TooltipTrigger>
                           <TooltipContent className="max-w-xs">
                             <p><strong>What it measures:</strong> Total agreements sent last week</p>
-                            <p><strong>How it's calculated:</strong> Count of activity logs with type "Agreement_Sent" within last week</p>
+                            <p><strong>How it&apos;s calculated:</strong> Count of activity logs with type &quot;Agreement_Sent&quot; within last week</p>
                             <p><strong>Target levels:</strong> Excellent: 125%+ of target, Good: 100%+ of target, Needs Attention: 50%+ of target, Critical: Below 50%</p>
                           </TooltipContent>
                         </Tooltip>
@@ -524,7 +524,7 @@ export default function ReportingPage() {
                           </TooltipTrigger>
                           <TooltipContent className="max-w-xs">
                             <p><strong>What it measures:</strong> Total partner lists sent last week</p>
-                            <p><strong>How it's calculated:</strong> Count of activity logs with type "Partner_List_Sent" within last week</p>
+                            <p><strong>How it&apos;s calculated:</strong> Count of activity logs with type &quot;Partner_List_Sent&quot; within last week</p>
                             <p><strong>Target levels:</strong> Excellent: 125%+ of target, Good: 100%+ of target, Needs Attention: 50%+ of target, Critical: Below 50%</p>
                           </TooltipContent>
                         </Tooltip>
@@ -553,7 +553,7 @@ export default function ReportingPage() {
                           </TooltipTrigger>
                           <TooltipContent className="max-w-xs">
                             <p><strong>What it measures:</strong> Total sales last week</p>
-                            <p><strong>How it's calculated:</strong> Count of pipeline items with sales indicators or 'Sold' status updated last week</p>
+                            <p><strong>How it&apos;s calculated:</strong> Count of pipeline items with sales indicators or &apos;Sold&apos; status updated last week</p>
                             <p><strong>Target levels:</strong> Excellent: 125%+ of target, Good: 100%+ of target, Needs Attention: 50%+ of target, Critical: Below 50%</p>
                           </TooltipContent>
                         </Tooltip>
@@ -588,7 +588,7 @@ export default function ReportingPage() {
                           </TooltipTrigger>
                           <TooltipContent className="max-w-xs">
                             <p><strong>What it measures:</strong> Total completed calls this month</p>
-                            <p><strong>How it's calculated:</strong> Count of activity logs with type "Call_Completed" within the current month</p>
+                            <p><strong>How it&apos;s calculated:</strong> Count of activity logs with type &quot;Call_Completed&quot; within the current month</p>
                             <p><strong>Target levels:</strong> Excellent: 125%+ of target, Good: 100%+ of target, Needs Attention: 50%+ of target, Critical: Below 50%</p>
                           </TooltipContent>
                         </Tooltip>
@@ -623,7 +623,7 @@ export default function ReportingPage() {
                           </TooltipTrigger>
                           <TooltipContent className="max-w-xs">
                             <p><strong>What it measures:</strong> Total agreements sent this month</p>
-                            <p><strong>How it's calculated:</strong> Count of activity logs with type "Agreement_Sent" within the current month</p>
+                            <p><strong>How it&apos;s calculated:</strong> Count of activity logs with type &quot;Agreement_Sent&quot; within the current month</p>
                             <p><strong>Target levels:</strong> Excellent: 125%+ of target, Good: 100%+ of target, Needs Attention: 50%+ of target, Critical: Below 50%</p>
                           </TooltipContent>
                         </Tooltip>
@@ -658,7 +658,7 @@ export default function ReportingPage() {
                           </TooltipTrigger>
                           <TooltipContent className="max-w-xs">
                             <p><strong>What it measures:</strong> Total partner lists sent this month</p>
-                            <p><strong>How it's calculated:</strong> Count of activity logs with type "Partner_List_Sent" within the current month</p>
+                            <p><strong>How it&apos;s calculated:</strong> Count of activity logs with type &quot;Partner_List_Sent&quot; within the current month</p>
                             <p><strong>Target levels:</strong> Excellent: 125%+ of target, Good: 100%+ of target, Needs Attention: 50%+ of target, Critical: Below 50%</p>
                           </TooltipContent>
                         </Tooltip>
@@ -693,7 +693,7 @@ export default function ReportingPage() {
                           </TooltipTrigger>
                           <TooltipContent className="max-w-xs">
                             <p><strong>What it measures:</strong> Conversion rate from calls to sales this month</p>
-                            <p><strong>How it's calculated:</strong> (Sales this month / Calls this month) × 100</p>
+                            <p><strong>How it&apos;s calculated:</strong> (Sales this month / Calls this month) × 100</p>
                             <p><strong>Target levels:</strong> Excellent: 25%+, Good: 18%+, Needs Attention: 12%+, Critical: Below 12%</p>
                           </TooltipContent>
                         </Tooltip>
@@ -735,7 +735,7 @@ export default function ReportingPage() {
                           </TooltipTrigger>
                           <TooltipContent className="max-w-xs">
                             <p><strong>What it measures:</strong> Total completed calls last month</p>
-                            <p><strong>How it's calculated:</strong> Count of activity logs with type "Call_Completed" within last month</p>
+                            <p><strong>How it&apos;s calculated:</strong> Count of activity logs with type &quot;Call_Completed&quot; within last month</p>
                             <p><strong>Target levels:</strong> Excellent: 125%+ of target, Good: 100%+ of target, Needs Attention: 50%+ of target, Critical: Below 50%</p>
                           </TooltipContent>
                         </Tooltip>
@@ -764,7 +764,7 @@ export default function ReportingPage() {
                           </TooltipTrigger>
                           <TooltipContent className="max-w-xs">
                             <p><strong>What it measures:</strong> Total agreements sent last month</p>
-                            <p><strong>How it's calculated:</strong> Count of activity logs with type "Agreement_Sent" within last month</p>
+                            <p><strong>How it&apos;s calculated:</strong> Count of activity logs with type &quot;Agreement_Sent&quot; within last month</p>
                             <p><strong>Target levels:</strong> Excellent: 125%+ of target, Good: 100%+ of target, Needs Attention: 50%+ of target, Critical: Below 50%</p>
                           </TooltipContent>
                         </Tooltip>
@@ -793,7 +793,7 @@ export default function ReportingPage() {
                           </TooltipTrigger>
                           <TooltipContent className="max-w-xs">
                             <p><strong>What it measures:</strong> Total partner lists sent last month</p>
-                            <p><strong>How it's calculated:</strong> Count of activity logs with type "Partner_List_Sent" within last month</p>
+                            <p><strong>How it&apos;s calculated:</strong> Count of activity logs with type &quot;Partner_List_Sent&quot; within last month</p>
                             <p><strong>Target levels:</strong> Excellent: 125%+ of target, Good: 100%+ of target, Needs Attention: 50%+ of target, Critical: Below 50%</p>
                           </TooltipContent>
                         </Tooltip>
@@ -822,7 +822,7 @@ export default function ReportingPage() {
                           </TooltipTrigger>
                           <TooltipContent className="max-w-xs">
                             <p><strong>What it measures:</strong> Conversion rate from calls to sales last month</p>
-                            <p><strong>How it's calculated:</strong> (Sales last month / Calls last month) × 100</p>
+                            <p><strong>How it&apos;s calculated:</strong> (Sales last month / Calls last month) × 100</p>
                             <p><strong>Target levels:</strong> Excellent: 25%+, Good: 18%+, Needs Attention: 12%+, Critical: Below 12%</p>
                           </TooltipContent>
                         </Tooltip>
@@ -857,7 +857,7 @@ export default function ReportingPage() {
                     </TooltipTrigger>
                     <TooltipContent className="max-w-xs">
                       <p><strong>What it shows:</strong> Call volume trends over the last 4 weeks</p>
-                      <p><strong>Data source:</strong> Activity logs with type "Call_Completed" grouped by week</p>
+                      <p><strong>Data source:</strong> Activity logs with type &quot;Call_Completed&quot; grouped by week</p>
                       <p><strong>Purpose:</strong> Track call volume consistency and identify patterns</p>
                     </TooltipContent>
                   </Tooltip>
@@ -888,7 +888,7 @@ export default function ReportingPage() {
                     </TooltipTrigger>
                     <TooltipContent className="max-w-xs">
                       <p><strong>What it shows:</strong> Agreement volume trends over the last 4 months</p>
-                      <p><strong>Data source:</strong> Activity logs with type "Agreement_Sent" grouped by month</p>
+                      <p><strong>Data source:</strong> Activity logs with type &quot;Agreement_Sent&quot; grouped by month</p>
                       <p><strong>Purpose:</strong> Track agreement generation consistency and growth</p>
                     </TooltipContent>
                   </Tooltip>
@@ -919,7 +919,7 @@ export default function ReportingPage() {
                     </TooltipTrigger>
                     <TooltipContent className="max-w-xs">
                       <p><strong>What it shows:</strong> Lists sent and conversions by quarter</p>
-                      <p><strong>Data source:</strong> Activity logs with type "Partner_List_Sent" and pipeline sales data</p>
+                      <p><strong>Data source:</strong> Activity logs with type &quot;Partner_List_Sent&quot; and pipeline sales data</p>
                       <p><strong>Purpose:</strong> Track list performance and conversion rates over time</p>
                     </TooltipContent>
                   </Tooltip>

@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
             select: { readAt: true },
           });
 
-          const where: any = {
+          const where: Record<string, unknown> = {
             conversationId: c.id,
             isDeleted: false,
           };
@@ -49,10 +49,10 @@ export async function GET(req: NextRequest) {
     }, req);
 
     return NextResponse.json({ conversations: data });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Conversations GET failed:', err);
-    await SecurityService.logAction({ action: 'LIST', resource: 'MESSAGING', success: false, errorMsg: err?.message }, req);
-    return NextResponse.json({ error: 'Failed to load conversations', detail: err?.message }, { status: 500 });
+    await SecurityService.logAction({ action: 'LIST', resource: 'MESSAGING', success: false, errorMsg: err instanceof Error ? err.message : 'Unknown error' }, req);
+    return NextResponse.json({ error: 'Failed to load conversations', detail: err instanceof Error ? err.message : 'Unknown error' }, { status: 500 });
   }
 }
 
@@ -89,10 +89,10 @@ export async function POST(req: NextRequest) {
     }, req);
 
     return NextResponse.json({ conversation: data }, { status: 201 });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Conversations POST failed:', err);
-    await SecurityService.logAction({ action: 'CREATE', resource: 'MESSAGING', success: false, errorMsg: err?.message }, req);
-    return NextResponse.json({ error: 'Failed to create conversation', detail: err?.message }, { status: 500 });
+    await SecurityService.logAction({ action: 'CREATE', resource: 'MESSAGING', success: false, errorMsg: err instanceof Error ? err.message : 'Unknown error' }, req);
+    return NextResponse.json({ error: 'Failed to create conversation', detail: err instanceof Error ? err.message : 'Unknown error' }, { status: 500 });
   }
 }
 

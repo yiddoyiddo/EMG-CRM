@@ -17,7 +17,7 @@ export interface AuditLogData {
   action: string;
   resource: string;
   resourceId?: string;
-  details?: any;
+  details?: Record<string, any> | null;
   success?: boolean;
   errorMsg?: string;
   ipAddress?: string;
@@ -30,7 +30,7 @@ export class SecurityService {
     const session = await getServerSession(authOptions);
     if (!session?.user) return null;
 
-    const user = session.user as any; // Type assertion for extended user properties
+    const user = session.user as { id: string; role: Role; territoryId?: string | null; managedTerritories?: any[]; managedTerritoryIds?: string[] };
 
     // Get user permissions
     const userPermissions = await prisma.userPermission.findMany({
@@ -83,7 +83,7 @@ export class SecurityService {
     context: SecurityContext,
     resource: Resource,
     action: Action,
-    resourceData?: any
+    resourceData?: Record<string, any>
   ): Promise<boolean> {
     // Allow authenticated users to use messaging features; row-level checks are enforced per endpoint
     if (resource === 'MESSAGING') {
@@ -104,7 +104,7 @@ export class SecurityService {
     context: SecurityContext,
     resource: Resource,
     action: Action,
-    resourceData?: any
+    resourceData?: Record<string, any>
   ): Promise<boolean> {
     // Admin can access everything
     if (context.role === 'ADMIN') {
@@ -137,7 +137,7 @@ export class SecurityService {
     }
   }
 
-  private static canAccessLeads(context: SecurityContext, leadData?: any): boolean {
+  private static canAccessLeads(context: SecurityContext, leadData?: Record<string, any>): boolean {
     if (!leadData) return true; // For general access
 
     // BDRs can only see their own leads
@@ -159,7 +159,7 @@ export class SecurityService {
     return context.role === 'DIRECTOR';
   }
 
-  private static canAccessPipeline(context: SecurityContext, pipelineData?: any): boolean {
+  private static canAccessPipeline(context: SecurityContext, pipelineData?: Record<string, any>): boolean {
     if (!pipelineData) return true;
 
     // BDRs can only see their own pipeline items
@@ -180,7 +180,7 @@ export class SecurityService {
     return context.role === 'DIRECTOR';
   }
 
-  private static canAccessFinance(context: SecurityContext, financeData?: any): boolean {
+  private static canAccessFinance(context: SecurityContext, financeData?: Record<string, any>): boolean {
     // Finance data is more restricted
     if (context.role === 'BDR') {
       return financeData?.bdrId === context.userId;
@@ -198,7 +198,7 @@ export class SecurityService {
     return context.role === 'DIRECTOR';
   }
 
-  private static canAccessUsers(context: SecurityContext, action: Action, userData?: any): boolean {
+  private static canAccessUsers(context: SecurityContext, action: Action, userData?: Record<string, any>): boolean {
     // Only managers and above can manage users
     if (action === 'CREATE' || action === 'DELETE' || action === 'MANAGE') {
       return ['MANAGER', 'DIRECTOR'].includes(context.role);
@@ -220,7 +220,7 @@ export class SecurityService {
     return context.role === 'DIRECTOR';
   }
 
-  private static canAccessReports(context: SecurityContext, reportData?: any): boolean {
+  private static canAccessReports(context: SecurityContext, reportData?: Record<string, any>): boolean {
     // BDRs can only see their own reports
     if (context.role === 'BDR') {
       return reportData?.scope === 'self';
@@ -234,7 +234,7 @@ export class SecurityService {
     return ['MANAGER', 'DIRECTOR'].includes(context.role);
   }
 
-  private static canAccessTemplates(context: SecurityContext, action: Action, templateData?: any): boolean {
+  private static canAccessTemplates(context: SecurityContext, action: Action, templateData?: Record<string, any>): boolean {
     // All authenticated roles can READ templates by default if they have READ permission assigned
     if (action === 'READ') return true;
     // For CREATE/UPDATE/DELETE, allow BDR and above if they have the permission assigned
@@ -293,7 +293,7 @@ export class SecurityService {
   static async createDataAccessPolicy(
     userId: string,
     resource: Resource,
-    conditions: any,
+    conditions: Record<string, any>,
     createdBy: string
   ): Promise<void> {
     await prisma.dataAccessPolicy.create({
@@ -317,10 +317,10 @@ export class SecurityService {
   }
 
   static buildSecureQuery(
-    baseQuery: any,
+    baseQuery: Record<string, any>,
     context: SecurityContext,
     resource: Resource
-  ): any {
+  ): Record<string, any> {
     if (context.role === 'ADMIN') {
       return baseQuery; // Admin sees everything
     }
@@ -341,7 +341,7 @@ export class SecurityService {
     }
   }
 
-  private static buildLeadsQuery(baseQuery: any, context: SecurityContext): any {
+  private static buildLeadsQuery(baseQuery: Record<string, any>, context: SecurityContext): Record<string, any> {
     if (context.role === 'BDR') {
       return {
         ...baseQuery,
@@ -381,7 +381,7 @@ export class SecurityService {
     return baseQuery; // Directors see all
   }
 
-  private static buildPipelineQuery(baseQuery: any, context: SecurityContext): any {
+  private static buildPipelineQuery(baseQuery: Record<string, any>, context: SecurityContext): Record<string, any> {
     if (context.role === 'BDR') {
       return {
         ...baseQuery,
@@ -421,7 +421,7 @@ export class SecurityService {
     return baseQuery;
   }
 
-  private static buildFinanceQuery(baseQuery: any, context: SecurityContext): any {
+  private static buildFinanceQuery(baseQuery: Record<string, any>, context: SecurityContext): Record<string, any> {
     if (context.role === 'BDR') {
       return {
         ...baseQuery,

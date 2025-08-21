@@ -1,12 +1,8 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/db";
 import { createLeadSchema } from "@/lib/validations";
 import { NextRequest } from "next/server";
 import { Resource, Action, DuplicateAction } from "@prisma/client";
-import { getAuthenticatedUser, createErrorResponse, createSuccessResponse } from "@/lib/auth-api";
-import { hasPermission, getDataAccessFilter } from "@/lib/permissions";
 import { SecurityService, withSecurity } from "@/lib/security";
 import { duplicateDetectionService } from "@/lib/duplicate-detection";
 
@@ -23,14 +19,14 @@ export async function GET(req: NextRequest) {
     const skip = (page - 1) * pageSize;
     
     // Build base query
-    let baseQuery: any = {
+    const baseQuery: Record<string, any> = {
       skip,
       take: pageSize,
       orderBy: { addedDate: 'desc' }
     };
 
     // Build where clause with filters
-    let where: any = {};
+    const where: Record<string, any> = {};
     
     if (search) {
       where.OR = [
@@ -92,7 +88,7 @@ export async function GET(req: NextRequest) {
     
     // Transform the response
     const transformedLeads = leads.map(lead => {
-      const { pipelineItems, bdr, ...rest } = lead as any;
+      const { pipelineItems, bdr, ...rest } = lead as Record<string, any>;
       const latestItem = pipelineItems[0];
       return {
         ...rest,

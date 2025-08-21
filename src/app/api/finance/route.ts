@@ -353,14 +353,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { role, id: userId, name: userName } = session.user;
+    const { role, name: userName } = session.user;
     const data = await req.json();
     
     // Validate the finance entry data
     const validatedData = createFinanceEntrySchema.parse(data);
     
     // 3. Enforce Authorization (RBAC) for finance entry creation
-    let financeData = { ...validatedData };
+    const financeData = { ...validatedData };
     
     if (role === Role.BDR) {
       // BDRs can only create finance entries assigned to themselves

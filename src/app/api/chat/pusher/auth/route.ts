@@ -28,8 +28,8 @@ export async function POST(req: NextRequest) {
     }, req);
 
     return new NextResponse(authResponse, { status: 200 });
-  } catch (err: any) {
-    await SecurityService.logAction({ action: 'READ', resource: 'MESSAGING', success: false, errorMsg: err?.message }, req);
+  } catch (err: unknown) {
+    await SecurityService.logAction({ action: 'READ', resource: 'MESSAGING', success: false, errorMsg: err instanceof Error ? err.message : 'Unknown error' }, req);
     return NextResponse.json({ error: 'Auth failed' }, { status: 403 });
   }
 }
