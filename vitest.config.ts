@@ -7,10 +7,7 @@ export default defineConfig({
     globals: true,
     include: ['tests/**/*.test.ts'],
   },
-  // Prevent Vitest/Vite from attempting to load the project's PostCSS config
-  css: {
-    postcss: null,
-  },
+  // Prevent Vitest/Vite from attempting to process CSS
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

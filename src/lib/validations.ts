@@ -219,6 +219,7 @@ export const pipelineSchema = z.object({
   link: z.string().optional().nullable(),
   phone: z.string().optional().nullable(),
   email: z.string().optional().nullable(),
+  callDate: dateSchema,
 });
 
 // Enhanced filtering for pipeline items

@@ -27,7 +27,8 @@
       "Bash(npm run:*)",
       "Bash(psql:*)",
       "Bash(if exist .next rmdir /s /q .next)",
-      "Bash(timeout:*)"
+      "Bash(timeout:*)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits",

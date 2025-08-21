@@ -39,7 +39,7 @@ export function calculateTeamPerformance(pipelineItems: any[], activityLogs: any
     
     // Use enhanced call completion logic for BDR performance
     const allCallCompletions = getAllCallCompletions(pipelineItems, activityLogs, new Date(0), new Date());
-    const bdrCallCompletions = allCallCompletions.filter(completion => completion.bdr?.name === bdr);
+    const bdrCallCompletions = allCallCompletions.filter(completion => completion.bdr === bdr);
     const calls = bdrCallCompletions.length;
     
     const agreements = bdrActivities.filter(log => log.activityType === 'Agreement_Sent').length;

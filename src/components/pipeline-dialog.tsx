@@ -53,18 +53,20 @@ export function PipelineDialog({
         {buttonLabel}
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{title}</DialogTitle>
+        <DialogContent className="max-w-6xl max-h-[95vh] overflow-y-auto p-0">
+          <DialogHeader className="px-8 pt-8 pb-0">
+            <DialogTitle className="sr-only">{title}</DialogTitle>
           </DialogHeader>
-          <PipelineForm
-            initialData={initialData}
-            onSuccess={handleSuccess}
-            onCancel={() => setOpen(false)}
-            defaultCategory={defaultCategory}
-            defaultStatus={defaultStatus}
-            defaultBdr={defaultBdr}
-          />
+          <div className="px-8 pb-8">
+            <PipelineForm
+              initialData={initialData}
+              onSuccess={handleSuccess}
+              onCancel={() => setOpen(false)}
+              defaultCategory={defaultCategory}
+              defaultStatus={defaultStatus}
+              defaultBdr={defaultBdr}
+            />
+          </div>
         </DialogContent>
       </Dialog>
     </>

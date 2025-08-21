@@ -72,6 +72,27 @@ export class DataExportService {
         sensitiveFields: [],
         requireApproval: false,
         allowedFormats: ['csv']
+      },
+      DUPLICATES: {
+        maxRecords: 0,
+        allowedFields: [],
+        sensitiveFields: [],
+        requireApproval: true,
+        allowedFormats: []
+      },
+      MESSAGING: {
+        maxRecords: 50,
+        allowedFields: ['timestamp', 'content', 'sender'],
+        sensitiveFields: [],
+        requireApproval: false,
+        allowedFormats: ['csv']
+      },
+      TEMPLATES: {
+        maxRecords: 20,
+        allowedFields: ['name', 'category', 'content'],
+        sensitiveFields: [],
+        requireApproval: false,
+        allowedFormats: ['csv']
       }
     },
     TEAM_LEAD: {
@@ -120,6 +141,27 @@ export class DataExportService {
       ACTIVITY_LOGS: {
         maxRecords: 1000,
         allowedFields: ['timestamp', 'activityType', 'description', 'bdrId'],
+        sensitiveFields: [],
+        requireApproval: false,
+        allowedFormats: ['csv']
+      },
+      DUPLICATES: {
+        maxRecords: 100,
+        allowedFields: ['name', 'company', 'status', 'conflictType'],
+        sensitiveFields: [],
+        requireApproval: false,
+        allowedFormats: ['csv']
+      },
+      MESSAGING: {
+        maxRecords: 200,
+        allowedFields: ['timestamp', 'content', 'sender', 'threadId'],
+        sensitiveFields: [],
+        requireApproval: false,
+        allowedFormats: ['csv']
+      },
+      TEMPLATES: {
+        maxRecords: 100,
+        allowedFields: ['name', 'category', 'content', 'createdBy'],
         sensitiveFields: [],
         requireApproval: false,
         allowedFormats: ['csv']
@@ -174,6 +216,27 @@ export class DataExportService {
         sensitiveFields: [],
         requireApproval: false,
         allowedFormats: ['csv', 'json']
+      },
+      DUPLICATES: {
+        maxRecords: 1000,
+        allowedFields: ['*'],
+        sensitiveFields: [],
+        requireApproval: false,
+        allowedFormats: ['csv', 'json', 'xlsx']
+      },
+      MESSAGING: {
+        maxRecords: 1000,
+        allowedFields: ['*'],
+        sensitiveFields: [],
+        requireApproval: false,
+        allowedFormats: ['csv', 'json', 'xlsx']
+      },
+      TEMPLATES: {
+        maxRecords: 500,
+        allowedFields: ['*'],
+        sensitiveFields: [],
+        requireApproval: false,
+        allowedFormats: ['csv', 'json', 'xlsx']
       }
     },
     DIRECTOR: {
@@ -225,6 +288,27 @@ export class DataExportService {
         sensitiveFields: [],
         requireApproval: false,
         allowedFormats: ['csv', 'json', 'xlsx']
+      },
+      DUPLICATES: {
+        maxRecords: 50000,
+        allowedFields: ['*'],
+        sensitiveFields: [],
+        requireApproval: false,
+        allowedFormats: ['csv', 'json', 'xlsx']
+      },
+      MESSAGING: {
+        maxRecords: 50000,
+        allowedFields: ['*'],
+        sensitiveFields: [],
+        requireApproval: false,
+        allowedFormats: ['csv', 'json', 'xlsx']
+      },
+      TEMPLATES: {
+        maxRecords: 10000,
+        allowedFields: ['*'],
+        sensitiveFields: [],
+        requireApproval: false,
+        allowedFormats: ['csv', 'json', 'xlsx']
       }
     },
     ADMIN: {
@@ -271,6 +355,27 @@ export class DataExportService {
         allowedFormats: ['csv', 'json', 'xlsx']
       },
       ACTIVITY_LOGS: {
+        maxRecords: -1,
+        allowedFields: ['*'],
+        sensitiveFields: [],
+        requireApproval: false,
+        allowedFormats: ['csv', 'json', 'xlsx']
+      },
+      DUPLICATES: {
+        maxRecords: -1,
+        allowedFields: ['*'],
+        sensitiveFields: [],
+        requireApproval: false,
+        allowedFormats: ['csv', 'json', 'xlsx']
+      },
+      MESSAGING: {
+        maxRecords: -1,
+        allowedFields: ['*'],
+        sensitiveFields: [],
+        requireApproval: false,
+        allowedFormats: ['csv', 'json', 'xlsx']
+      },
+      TEMPLATES: {
         maxRecords: -1,
         allowedFields: ['*'],
         sensitiveFields: [],
@@ -493,7 +598,10 @@ export class DataExportService {
       USERS: 'createdAt',
       ACTIVITY_LOGS: 'timestamp',
       REPORTS: 'createdAt',
-      SETTINGS: 'createdAt'
+      SETTINGS: 'createdAt',
+      DUPLICATES: 'createdAt',
+      MESSAGING: 'timestamp',
+      TEMPLATES: 'createdAt'
     };
 
     return dateFieldMap[resource] || null;

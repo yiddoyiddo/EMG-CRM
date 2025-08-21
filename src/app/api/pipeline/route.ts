@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient, Resource, Action } from '@prisma/client';
-import { createSublistSchema } from '@/lib/validations';
+import { createSublistSchema, pipelineSchema } from '@/lib/validations';
 import { SecurityService, withSecurity } from '@/lib/security';
 
 const prisma = new PrismaClient();
@@ -10,9 +10,9 @@ export async function GET(req: NextRequest) {
   return withSecurity(Resource.PIPELINE, Action.READ, async (context) => {
     const { searchParams } = new URL(req.url);
     const search = (searchParams.get('search') || '').trim();
-    const category = searchParams.get('category') || undefined;
-    const status = searchParams.get('status') || undefined;
-    const bdr = searchParams.get('bdr') || undefined;
+    const category = (searchParams.get('category') || '').trim();
+    const status = (searchParams.get('status') || '').trim();
+    const bdr = (searchParams.get('bdr') || '').trim();
     const page = parseInt(searchParams.get('page') || '1', 10);
     const pageSize = parseInt(searchParams.get('pageSize') || '50', 10);
     const skip = (page - 1) * pageSize;
@@ -102,73 +102,143 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    
-    // Validate the request body
-    const validatedData = createSublistSchema.parse(body);
-    
-    // Create the sublist
-    const sublist = await prisma.pipelineItem.create({
-      data: {
-        name: validatedData.name,
-        bdr: validatedData.bdr,
-        category: validatedData.category,
-        status: validatedData.status,
-        parentId: validatedData.parentId,
-        isSublist: true,
-        sublistName: validatedData.name,
-        sortOrder: validatedData.sortOrder,
-        // Set default values for required fields
-        title: null,
-        company: null,
-        value: null,
-        probability: null,
-        expectedCloseDate: null,
-        callDate: null,
-        link: null,
-        phone: null,
-        notes: `Sublist: ${validatedData.name}`,
-        email: null,
-        leadId: null,
-      },
-      include: {
-        children: {
-          orderBy: {
-            sortOrder: 'asc',
+  return withSecurity(Resource.PIPELINE, Action.CREATE, async (context) => {
+    try {
+      const body = await request.json();
+      
+      // Check if this is a sublist creation or regular pipeline item
+      if (body.isSublist) {
+        // Handle sublist creation
+        const validatedData = createSublistSchema.parse(body);
+        
+        // Find the BDR user by name
+        const bdrUser = await prisma.user.findFirst({
+          where: { name: validatedData.bdr }
+        });
+        
+        if (!bdrUser) {
+          return NextResponse.json(
+            { error: `BDR "${validatedData.bdr}" not found` },
+            { status: 400 }
+          );
+        }
+        
+        // Create the sublist
+        const sublist = await prisma.pipelineItem.create({
+          data: {
+            name: validatedData.name,
+            bdrId: bdrUser.id,
+            category: validatedData.category,
+            status: validatedData.status,
+            parentId: validatedData.parentId,
+            isSublist: true,
+            sublistName: validatedData.name,
+            sortOrder: validatedData.sortOrder,
+            // Set default values for required fields
+            title: null,
+            company: null,
+            value: null,
+            probability: null,
+            expectedCloseDate: null,
+            callDate: null,
+            link: null,
+            phone: null,
+            notes: `Sublist: ${validatedData.name}`,
+            email: null,
+            leadId: null,
           },
-        },
-        parent: true,
-      },
-    });
+          include: {
+            children: {
+              orderBy: {
+                sortOrder: 'asc',
+              },
+            },
+            parent: true,
+          },
+        });
 
-    // Create activity log for sublist creation
-    await prisma.activityLog.create({
-      data: {
-        bdr: validatedData.bdr,
-        activityType: 'Note_Added',
-        description: `Created sublist: ${validatedData.name}`,
-        pipelineItemId: sublist.id,
-        notes: `Sublist created in ${validatedData.category} - ${validatedData.status}`,
-      },
-    });
+        // Create activity log for sublist creation
+        await prisma.activityLog.create({
+          data: {
+            bdrId: bdrUser.id,
+            activityType: 'Note_Added',
+            description: `Created sublist: ${validatedData.name}`,
+            pipelineItemId: sublist.id,
+            notes: `Sublist created in ${validatedData.category} - ${validatedData.status}`,
+          },
+        });
 
-    return NextResponse.json(sublist);
-  } catch (error) {
-    console.error('Error creating sublist:', error);
-    
-    if (error instanceof Error) {
+        return NextResponse.json(sublist);
+      } else {
+        // Handle regular pipeline item creation
+        const validatedData = pipelineSchema.parse(body);
+        
+        // Find the BDR user by name
+        const bdrUser = await prisma.user.findFirst({
+          where: { name: validatedData.bdr }
+        });
+        
+        if (!bdrUser) {
+          return NextResponse.json(
+            { error: `BDR "${validatedData.bdr}" not found` },
+            { status: 400 }
+          );
+        }
+        
+        // Create the pipeline item
+        const pipelineItem = await prisma.pipelineItem.create({
+          data: {
+            name: validatedData.name,
+            bdrId: bdrUser.id,
+            company: validatedData.company,
+            category: validatedData.category,
+            status: validatedData.status,
+            value: validatedData.value,
+            notes: validatedData.notes,
+            link: validatedData.link,
+            phone: validatedData.phone,
+            email: validatedData.email,
+            callDate: validatedData.callDate,
+            isSublist: false,
+          },
+          include: {
+            bdr: { select: { name: true, territoryId: true } },
+            children: {
+              orderBy: { sortOrder: 'asc' },
+            },
+            parent: true,
+          },
+        });
+
+        // Create activity log for pipeline item creation
+        await prisma.activityLog.create({
+          data: {
+            bdrId: bdrUser.id,
+            activityType: 'Note_Added',
+            description: `Created pipeline item: ${validatedData.name}`,
+            pipelineItemId: pipelineItem.id,
+            notes: `Pipeline item created in ${validatedData.category} - ${validatedData.status}`,
+          },
+        });
+
+        return NextResponse.json(pipelineItem);
+      }
+    } catch (error) {
+      console.error('Error creating pipeline item:', error);
+      
+      if (error instanceof Error) {
+        return NextResponse.json(
+          { error: error.message },
+          { status: 400 }
+        );
+      }
+      
       return NextResponse.json(
-        { error: error.message },
-        { status: 400 }
+        { error: 'Failed to create pipeline item' },
+        { status: 500 }
       );
+    } finally {
+      await prisma.$disconnect();
     }
-    
-    return NextResponse.json(
-      { error: 'Failed to create sublist' },
-      { status: 500 }
-    );
-  } finally {
-    await prisma.$disconnect();
-  }
+  }, request);
 } 
