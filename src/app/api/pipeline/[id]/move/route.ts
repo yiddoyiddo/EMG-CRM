@@ -55,7 +55,7 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
     // Create activity log entry for pipeline move
     await prisma.activityLog.create({
       data: {
-        bdr: pipelineItem.bdr,
+        bdrId: pipelineItem.bdrId,
         activityType: "Pipeline_Move",
         description: `Moved from ${previousCategory} (${previousStatus}) to ${validatedData.newCategory} (${validatedData.newStatus})`,
         pipelineItemId: pipelineId,
@@ -73,7 +73,7 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
         !['no show', 'rescheduled', 'No Show', 'Rescheduled'].includes(validatedData.newStatus.toLowerCase())) {
       await prisma.activityLog.create({
         data: {
-          bdr: pipelineItem.bdr,
+          bdrId: pipelineItem.bdrId,
           activityType: 'Call_Completed',
           description: `Call completed automatically: ${previousStatus} → ${validatedData.newStatus}`,
           previousStatus: previousStatus,

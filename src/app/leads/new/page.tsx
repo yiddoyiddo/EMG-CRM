@@ -30,12 +30,17 @@ export default function NewLeadPage() {
   };
   
   return (
-    <div className="container py-10">
-      <Card>
-        <CardHeader>
-          <CardTitle>Create New Lead</CardTitle>
+    <div className="w-full max-w-6xl mx-auto py-10 px-4">
+      <Card className="shadow-lg border-0 bg-white/90 dark:bg-gray-950/90 backdrop-blur-sm">
+        <CardHeader className="pb-8 text-center border-b bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800">
+          <CardTitle className="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
+            Create New Lead
+          </CardTitle>
+          <p className="text-gray-600 dark:text-gray-300 mt-2 text-lg">
+            Add a new lead to your sales pipeline with comprehensive contact and scheduling information
+          </p>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-8">
           <LeadForm onSubmit={handleSubmit} onSaveAndAddToPipeline={handleSaveAndAddToPipeline} isSubmitting={isPending} />
         </CardContent>
       </Card>

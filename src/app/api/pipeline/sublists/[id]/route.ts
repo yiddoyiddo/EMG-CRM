@@ -62,7 +62,7 @@ export async function DELETE(
     // Create activity log for sublist deletion
     await prisma.activityLog.create({
       data: {
-        bdr: sublist.bdr,
+        bdrId: sublist.bdrId,
         activityType: 'Note_Added',
         description: `Deleted sublist: ${sublist.sublistName || sublist.name}`,
         notes: `Sublist deleted from ${sublist.category} - ${sublist.status}`,

@@ -11,11 +11,23 @@ export async function POST(request: NextRequest) {
     // Validate the request body
     const validatedData = createSublistSchema.parse(body);
     
+    // Find the BDR user by name
+    const bdrUser = await prisma.user.findFirst({
+      where: { name: validatedData.bdr }
+    });
+    
+    if (!bdrUser) {
+      return NextResponse.json(
+        { error: `BDR "${validatedData.bdr}" not found` },
+        { status: 400 }
+      );
+    }
+    
     // Create the sublist
     const sublist = await prisma.pipelineItem.create({
       data: {
         name: validatedData.name,
-        bdr: validatedData.bdr,
+        bdrId: bdrUser.id,
         category: validatedData.category,
         status: validatedData.status,
         parentId: validatedData.parentId,
@@ -48,7 +60,7 @@ export async function POST(request: NextRequest) {
     // Create activity log for sublist creation
     await prisma.activityLog.create({
       data: {
-        bdr: validatedData.bdr,
+        bdrId: bdrUser.id,
         activityType: 'Note_Added',
         description: `Created sublist: ${validatedData.name}`,
         pipelineItemId: sublist.id,

@@ -9,6 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./select";
+import { Checkbox } from "./checkbox";
 import { useUpdateLead } from "@/lib/hooks";
 import { Check, X, PenSquare } from "lucide-react";
 import { Button } from "./button";
@@ -20,12 +21,13 @@ import {
 } from "./tooltip";
 
 interface EditableCellProps {
-  value: string;
+  value: string | boolean;
   row: { original: Record<string, unknown> };
   column: {
     id: string;
   };
   isSelect?: boolean;
+  isCheckbox?: boolean;
   options?: string[];
 }
 
@@ -34,6 +36,7 @@ export function EditableCell({
   row,
   column,
   isSelect = false,
+  isCheckbox = false,
   options = [],
 }: EditableCellProps) {
   const [editing, setEditing] = useState(false);
@@ -70,10 +73,45 @@ export function EditableCell({
     setEditing(false);
   };
 
+  // Handle checkbox clicks directly without editing mode
+  const handleCheckboxChange = (checked: boolean) => {
+    const leadId = row.original.id;
+    const updateData = { 
+      id: leadId,
+      [column.id]: checked,
+    };
+    
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    updateLead(updateData as any);
+    setValue(checked);
+  };
+
   const onCancel = () => {
     setEditing(false);
     setValue(initialValue);
   };
+
+  // Handle checkbox rendering separately
+  if (isCheckbox) {
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="flex items-center justify-center">
+              <Checkbox
+                checked={Boolean(value)}
+                onCheckedChange={handleCheckboxChange}
+                disabled={isPending}
+              />
+            </div>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Toggle Lead Gen status</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  }
 
   if (editing) {
     return (
@@ -157,7 +195,7 @@ export function EditableCell({
             `}
             onClick={() => setEditing(true)}
           >
-            <span>{value || "-"}</span>
+            <span>{String(value) || "-"}</span>
             <PenSquare className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
         </TooltipTrigger>

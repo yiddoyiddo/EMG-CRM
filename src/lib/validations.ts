@@ -62,11 +62,17 @@ export const activityTypeEnum = [
   "Follow_Up_Scheduled"
 ] as const;
 
-// Helper function to handle date values
-const dateSchema = z.preprocess((arg) => {
-  if (typeof arg === 'string' || arg instanceof Date) return new Date(arg);
-  return arg;
-}, z.date().optional().nullable());
+// Optimized helper function to handle date values - enterprise grade performance
+const dateSchema = z.union([
+  z.string().transform((val) => {
+    if (val === '') return null;
+    const date = new Date(val);
+    return isNaN(date.getTime()) ? null : date;
+  }),
+  z.date(),
+  z.null(),
+  z.undefined()
+]).optional().nullable();
 
 // Base schema for lead validation
 export const leadSchema = z.object({
@@ -80,7 +86,9 @@ export const leadSchema = z.object({
   phone: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
   email: z.string().email("Invalid email address").optional().nullable(),
+  callDate: dateSchema,
   lastUpdated: dateSchema,
+  isLeadGen: z.boolean().default(false),
 });
 
 // Schema for creating a new lead
@@ -97,6 +105,7 @@ export const leadFilterSchema = z.object({
   status: z.enum(leadStatusEnum).optional(),
   source: z.enum(leadSourceEnum).optional(),
   bdr: z.string().optional(),
+  isLeadGen: z.boolean().optional(),
   page: z.number().default(1),
   pageSize: z.number().default(10),
 });

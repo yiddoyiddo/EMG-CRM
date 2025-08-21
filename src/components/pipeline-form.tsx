@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -80,6 +80,8 @@ export function PipelineForm({
 
   const form = useForm<FormValues>({
     resolver: zodResolver(pipelineSchema),
+    mode: 'onBlur', // Enterprise optimization: validate only on blur, not onChange
+    reValidateMode: 'onChange',
     defaultValues: {
       name: initialData?.name || '',
       company: initialData?.company || '',
@@ -95,11 +97,25 @@ export function PipelineForm({
     },
   });
 
-  // Watch category changes to update available statuses
+  // Memoized function for disabling past dates - enterprise performance optimization
+  const disablePastDates = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return (date: Date) => date < today;
+  }, []);
+
+  // Memoized callback for call date changes to prevent unnecessary re-renders
+  const handleCallDateChange = useCallback((date: Date | undefined) => {
+    form.setValue('callDate', date || null, { shouldValidate: false });
+  }, [form]);
+
+  // Optimized category watching to prevent unnecessary re-renders
   const watchedCategory = form.watch('category');
   useEffect(() => {
-    setSelectedCategory(watchedCategory);
-  }, [watchedCategory]);
+    if (watchedCategory !== selectedCategory) {
+      setSelectedCategory(watchedCategory);
+    }
+  }, [watchedCategory, selectedCategory]);
 
   const onSubmit = async (values: FormValues) => {
     const submitData = {
@@ -471,10 +487,8 @@ export function PipelineForm({
                           <Calendar
                             mode="single"
                             selected={field.value || undefined}
-                            onSelect={field.onChange}
-                            disabled={(date) =>
-                              date < new Date(new Date().setHours(0, 0, 0, 0))
-                            }
+                            onSelect={handleCallDateChange}
+                            disabled={disablePastDates}
                             initialFocus
                             className="rounded-lg"
                           />

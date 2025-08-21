@@ -73,7 +73,7 @@ export async function PATCH(
     
     await prisma.activityLog.create({
       data: {
-        bdr: item.bdr,
+        bdrId: item.bdrId,
         activityType: 'Note_Added',
         description: logDescription,
         pipelineItemId: itemId,

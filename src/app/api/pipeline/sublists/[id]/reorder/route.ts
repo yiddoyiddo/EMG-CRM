@@ -59,7 +59,7 @@ export async function PATCH(
     // Create activity log
     await prisma.activityLog.create({
       data: {
-        bdr: sublist.bdr,
+        bdrId: sublist.bdrId,
         activityType: 'Note_Added',
         description: `Reordered items in sublist: ${sublist.sublistName || sublist.name}`,
         pipelineItemId: sublistId,

@@ -29,7 +29,8 @@
       "Bash(if exist .next rmdir /s /q .next)",
       "Bash(timeout:*)",
       "Bash(git add:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits",

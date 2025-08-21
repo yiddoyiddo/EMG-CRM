@@ -23,6 +23,8 @@ import { LeadToPipelineDialog } from "./lead-to-pipeline-dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
 import { LeadUpdatesDialog } from './lead-updates-dialog';
+import { useLeadDetailDialog } from './lead-detail-provider';
+import React from 'react';
 
 // Custom type for column meta data
 interface ColumnMeta {
@@ -33,11 +35,16 @@ export function useLeadColumns(): ColumnDef<Lead, unknown>[] {
   const router = useRouter();
   const { mutate: deleteLead } = useDeleteLead();
   const { bdrs } = useBdrManager();
+  const { openLeadDetail } = useLeadDetailDialog();
 
   function handleDelete(id: number) {
     if (confirm("Are you sure you want to delete this lead?")) {
       deleteLead(id);
     }
+  }
+
+  function handleLeadClick(leadId: number) {
+    openLeadDetail(leadId);
   }
 
   return [
@@ -79,13 +86,21 @@ export function useLeadColumns(): ColumnDef<Lead, unknown>[] {
       meta: { priority: 'high' } as ColumnMeta,
     },
 
-    // Name column - highest priority
+    // Name column - highest priority (clickable)
     {
       accessorKey: "name",
       header: "Name",
       cell: ({ row }) => (
         <div className="flex items-center space-x-2">
-          <EditableCell value={row.getValue("name")} row={row} column={{ id: "name" }} />
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleLeadClick(row.original.id);
+            }}
+            className="text-left font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer transition-colors"
+          >
+            {row.getValue("name")}
+          </button>
           {row.original.notes && <NotesPopover notes={row.original.notes} />}
           {row.original.link && (
             <a 
@@ -93,6 +108,7 @@ export function useLeadColumns(): ColumnDef<Lead, unknown>[] {
               target="_blank" 
               rel="noopener noreferrer"
               className="text-blue-500 hover:text-blue-700 flex-shrink-0"
+              onClick={(e) => e.stopPropagation()}
             >
               <ExternalLink className="h-4 w-4" />
             </a>
@@ -252,7 +268,27 @@ export function useLeadColumns(): ColumnDef<Lead, unknown>[] {
       meta: { priority: 'low' } as ColumnMeta,
     },
 
-    // Pipeline indicator column - highest priority
+    // Lead Gen indicator column - high priority
+    {
+      id: "leadGen",
+      header: "Lead Gen",
+      cell: ({ row }) => {
+        const lead = row.original;
+        return (
+          <div className="flex items-center justify-center">
+            <EditableCell 
+              value={lead.isLeadGen} 
+              row={row} 
+              column={{ id: "isLeadGen" }}
+              isCheckbox={true}
+            />
+          </div>
+        );
+      },
+      meta: { priority: 'high' } as ColumnMeta,
+    },
+
+    // Pipeline indicator column - high priority
     {
       id: "pipeline",
       header: "Pipeline",

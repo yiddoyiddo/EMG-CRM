@@ -112,7 +112,7 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
     if (statusChanged) {
       await prisma.activityLog.create({
         data: {
-          bdr: pipelineItem.bdr,
+          bdrId: pipelineItem.bdrId,
           activityType: 'Status_Change',
           description: `Status changed from ${previousStatus} to ${newStatus}`,
           previousStatus: previousStatus,
@@ -132,7 +132,7 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
           !['no show', 'rescheduled', 'No Show', 'Rescheduled'].includes(newStatus.toLowerCase())) {
         await prisma.activityLog.create({
           data: {
-            bdr: pipelineItem.bdr,
+            bdrId: pipelineItem.bdrId,
             activityType: 'Call_Completed',
             description: `Call completed automatically: ${previousStatus} → ${newStatus}`,
             previousStatus: previousStatus,

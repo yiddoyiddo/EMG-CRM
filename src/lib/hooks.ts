@@ -32,6 +32,7 @@ export type Lead = {
   email?: string | null;
   inPipeline?: boolean;
   pipelineCategory?: string | null;
+  isLeadGen?: boolean;
 }
 
 export type PipelineItem = {

@@ -25,6 +25,7 @@ import { Navbar } from '@/components/ui/navbar';
 import { AddBdrDialog } from '@/components/ui/add-bdr-dialog';
 import { useRouter } from 'next/navigation';
 import { LeadsSavedViews, LeadsView } from '@/components/leads-saved-views';
+import { LeadDetailProvider } from '@/components/lead-detail-provider';
 
 function ErrorFallback({ error, resetErrorBoundary }: { error: Error; resetErrorBoundary: () => void }) {
   return (
@@ -227,7 +228,7 @@ function LeadsContent() {
   }, [columnVisibility, safeSetColumnVisibility]);
 
   return (
-    <>
+    <LeadDetailProvider>
       <Navbar />
       <div className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -378,7 +379,7 @@ function LeadsContent() {
           onColumnVisibilityChange={safeSetColumnVisibility}
         />
       </div>
-    </>
+    </LeadDetailProvider>
   );
 }
 
