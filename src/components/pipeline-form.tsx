@@ -213,9 +213,9 @@ export function PipelineForm({
   };
 
   return (
-    <div className="w-full max-w-5xl mx-auto">
+    <div className="w-full max-w-6xl mx-auto">
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-10">
           {/* Header */}
           <div className="text-center pb-6 border-b">
             <h2 className="text-3xl font-bold tracking-tight text-gray-900">
@@ -237,8 +237,8 @@ export function PipelineForm({
                 Essential contact and identification details for the lead
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <CardContent className="space-y-8">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <FormField
                   control={form.control}
                   name="name"
@@ -251,7 +251,7 @@ export function PipelineForm({
                       <FormControl>
                         <Input 
                           placeholder="e.g. John Smith" 
-                          className="h-11 border-gray-300 focus:border-blue-500 focus:ring-blue-500" 
+                          className="h-12 border-gray-300 focus:border-blue-500 focus:ring-blue-500" 
                           {...field} 
                         />
                       </FormControl>
@@ -275,7 +275,7 @@ export function PipelineForm({
                       <FormControl>
                         <Input 
                           placeholder="e.g. Acme Corporation" 
-                          className="h-11 border-gray-300 focus:border-blue-500 focus:ring-blue-500" 
+                          className="h-12 border-gray-300 focus:border-blue-500 focus:ring-blue-500" 
                           {...field} 
                           value={field.value || ''} 
                         />
@@ -303,7 +303,7 @@ export function PipelineForm({
                           value={field.value || ''}
                         >
                           <FormControl>
-                            <SelectTrigger className="flex-1 h-11 border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+                            <SelectTrigger className="flex-1 h-12 border-gray-300 focus:border-blue-500 focus:ring-blue-500">
                               <SelectValue placeholder="Select assigned BDR" />
                             </SelectTrigger>
                           </FormControl>
@@ -341,7 +341,7 @@ export function PipelineForm({
                         value={field.value || ''}
                       >
                         <FormControl>
-                          <SelectTrigger className="h-11 border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+                          <SelectTrigger className="h-12 border-gray-300 focus:border-blue-500 focus:ring-blue-500">
                             <SelectValue placeholder="Select pipeline category" />
                           </SelectTrigger>
                         </FormControl>
@@ -375,8 +375,8 @@ export function PipelineForm({
                 Current status and deal information
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+            <CardContent className="space-y-8">
+              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
                 <FormField
                   control={form.control}
                   name="status"
@@ -391,7 +391,7 @@ export function PipelineForm({
                         value={field.value || ''}
                       >
                         <FormControl>
-                          <SelectTrigger className="h-11 border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+                          <SelectTrigger className="h-12 border-gray-300 focus:border-blue-500 focus:ring-blue-500">
                             <SelectValue placeholder="Select current status" />
                           </SelectTrigger>
                         </FormControl>
@@ -425,7 +425,7 @@ export function PipelineForm({
                         <Input 
                           type="number" 
                           placeholder="0.00" 
-                          className="h-11 border-gray-300 focus:border-blue-500 focus:ring-blue-500" 
+                          className="h-12 border-gray-300 focus:border-blue-500 focus:ring-blue-500" 
                           {...field} 
                           value={field.value || ''}
                           onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
@@ -454,7 +454,7 @@ export function PipelineForm({
                             <Button
                               variant="outline"
                               className={cn(
-                                "w-full h-11 justify-start text-left font-normal border-gray-300 hover:border-gray-400 focus:border-blue-500 focus:ring-blue-500",
+                                "w-full h-12 justify-start text-left font-normal border-gray-300 hover:border-gray-400 focus:border-blue-500 focus:ring-blue-500",
                                 !field.value && "text-gray-500"
                               )}
                             >
@@ -467,7 +467,7 @@ export function PipelineForm({
                             </Button>
                           </FormControl>
                         </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0 shadow-lg border" align="start">
+                        <PopoverContent className="w-auto p-2 shadow-lg border" align="start">
                           <Calendar
                             mode="single"
                             selected={field.value || undefined}
@@ -502,8 +502,8 @@ export function PipelineForm({
                 How to reach this lead
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <CardContent className="space-y-8">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <FormField
                   control={form.control}
                   name="phone"
@@ -516,7 +516,7 @@ export function PipelineForm({
                       <FormControl>
                         <Input 
                           placeholder="+44 20 1234 5678" 
-                          className="h-11 border-gray-300 focus:border-blue-500 focus:ring-blue-500" 
+                          className="h-12 border-gray-300 focus:border-blue-500 focus:ring-blue-500" 
                           {...field} 
                           value={field.value || ''} 
                         />
@@ -542,7 +542,7 @@ export function PipelineForm({
                         <Input 
                           type="email"
                           placeholder="john.smith@company.com" 
-                          className="h-11 border-gray-300 focus:border-blue-500 focus:ring-blue-500" 
+                          className="h-12 border-gray-300 focus:border-blue-500 focus:ring-blue-500" 
                           {...field} 
                           value={field.value || ''} 
                         />
@@ -557,7 +557,7 @@ export function PipelineForm({
 
               </div>
               
-              <div className="grid grid-cols-1 gap-6">
+              <div className="grid grid-cols-1 gap-8">
                 <FormField
                   control={form.control}
                   name="link"
@@ -570,7 +570,7 @@ export function PipelineForm({
                         <Input 
                           type="url"
                           placeholder="https://linkedin.com/in/johnsmith" 
-                          className="h-11 border-gray-300 focus:border-blue-500 focus:ring-blue-500" 
+                          className="h-12 border-gray-300 focus:border-blue-500 focus:ring-blue-500" 
                           {...field} 
                           value={field.value || ''} 
                         />
@@ -634,14 +634,14 @@ export function PipelineForm({
                 router.push('/pipeline');
               }} 
               type="button"
-              className="min-w-[120px] h-11 font-medium"
+              className="min-w-[120px] h-12 font-medium"
             >
               Cancel
             </Button>
             <Button 
               type="submit" 
               size="lg"
-              className="min-w-[160px] h-11 font-medium bg-blue-600 hover:bg-blue-700 focus:ring-blue-500"
+              className="min-w-[160px] h-12 font-medium bg-blue-600 hover:bg-blue-700 focus:ring-blue-500"
               disabled={form.formState.isSubmitting}
             >
               {form.formState.isSubmitting ? (

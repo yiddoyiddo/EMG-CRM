@@ -53,7 +53,7 @@ export function PipelineDialog({
         {buttonLabel}
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-6xl max-h-[95vh] overflow-y-auto p-0">
+        <DialogContent className="max-w-7xl w-[90vw] max-h-[95vh] overflow-y-auto p-0">
           <DialogHeader className="px-8 pt-8 pb-0">
             <DialogTitle className="sr-only">{title}</DialogTitle>
           </DialogHeader>

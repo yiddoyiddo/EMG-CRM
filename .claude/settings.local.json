@@ -28,7 +28,8 @@
       "Bash(psql:*)",
       "Bash(if exist .next rmdir /s /q .next)",
       "Bash(timeout:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git push:*)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits",
