@@ -36,7 +36,10 @@ function ErrorFallback({ error, resetErrorBoundary }: { error: Error; resetError
 
 function PipelineContent() {
   const { data: session } = useSession();
-  const { bdrs, addBdr, getDefaultBdr } = useBdrManager(session?.user?.name);
+  const { bdrs, addBdr, getDefaultBdr } = useBdrManager(
+    session?.user?.name, 
+    (session?.user as any)?.role
+  );
   const [selectedBdr, setSelectedBdr] = useState<BdrType>(getDefaultBdr());
   const [viewType, setViewType] = useState<ViewType>('board');
   const queryClient = useQueryClient();
@@ -71,8 +74,20 @@ function PipelineContent() {
   // Update selected BDR when session loads or BDRs change
   useEffect(() => {
     const defaultBdr = getDefaultBdr();
-    if (defaultBdr && selectedBdr !== defaultBdr) {
-      setSelectedBdr(defaultBdr);
+    const userRole = (session?.user as any)?.role;
+    
+    // For admins and directors, only reset if the current selection is invalid
+    if (userRole === 'ADMIN' || userRole === 'DIRECTOR') {
+      if (selectedBdr && !bdrs.includes(selectedBdr)) {
+        setSelectedBdr(defaultBdr);
+      } else if (!selectedBdr) {
+        setSelectedBdr(defaultBdr);
+      }
+    } else {
+      // For other roles, use the default behavior
+      if (defaultBdr && selectedBdr !== defaultBdr) {
+        setSelectedBdr(defaultBdr);
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.user?.name, bdrs, selectedBdr]);

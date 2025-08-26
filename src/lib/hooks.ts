@@ -832,7 +832,7 @@ export function useReorderSublistItems() {
 } 
 
 // Custom hook for managing BDRs
-export function useBdrManager(currentUserName?: string | null) {
+export function useBdrManager(currentUserName?: string | null, userRole?: string | null) {
   const [bdrs, setBdrs] = useState<string[]>(Array.from(leadBdrEnum));
   const [isAddingBdr, setIsAddingBdr] = useState(false);
 
@@ -850,8 +850,15 @@ export function useBdrManager(currentUserName?: string | null) {
     }
   };
 
-  // Helper function to get default BDR based on current user
+  // Helper function to get default BDR based on current user and role
   const getDefaultBdr = () => {
+    // For ADMIN and DIRECTOR roles, don't force them to their own name
+    // Allow them to view any BDR's pipeline
+    if (userRole === 'ADMIN' || userRole === 'DIRECTOR') {
+      return bdrs[0] || '';
+    }
+    
+    // For other roles, default to their own name if available
     if (currentUserName && bdrs.includes(currentUserName)) {
       return currentUserName;
     }
